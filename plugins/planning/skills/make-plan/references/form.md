@@ -1,21 +1,23 @@
 # The form of a plan
 
-A plan is the one genre in the repo with a lifecycle: written, reviewed, executed, closed. This
-file owns how one is written: the sections and what each carries, the form of a task, how an
-address is cited, what a plan never carries, and its language. It does not own what "task done"
-means. That is the gate, and the gate belongs to the `CLAUDE.md` governing the surface a task
-touches: the root [`CLAUDE.md`](../../../../CLAUDE.md) for the architecture docs, the
-requirements and the generated contracts, [`backend/CLAUDE.md`](../../../../backend/CLAUDE.md)
-for Go, [`frontend/vartova/CLAUDE.md`](../../../../frontend/vartova/CLAUDE.md) for the console,
-and [`ml/CLAUDE.md`](../../../../ml/CLAUDE.md) for the engine.
-Nor does it own what a plan may contain at all: that is the placement table of
-[`framework.md`](../../../../docs/architecture/framework.md), and the file's name and place
-belong to [`docs/plans/README.md`](../../../../docs/plans/README.md).
+A plan is a document with a lifecycle: written, reviewed, executed, closed. This file owns how
+one is written: the sections and what each carries, the form of a task, how an address is cited,
+what a plan never carries, and its language. It does not own what "task done" means. That is the
+gate, and the gate of each surface is where the `Gates` section of the project rules says it
+is, by default the `CLAUDE.md` governing the surface a task touches. Nor does it own the file's
+name and place: those are the `Plans` section's. The sections of the project rules, and the
+default of each, are [`../../../references/rules.md`](../../../references/rules.md).
 
-`/exec-plan` runs a plan in waves of parallel lanes. Three parts of the form serve that: a
-task's `After:` and `Needs:` lines, the Shared files table in Execution, and a task size that
-ends on the tests of what the task touched, the whole tree's tests running once after the last
-wave. A plan whose Execution names the light mode runs instead with one executor, a narrower
+The `Plan form` section of the project rules adds to this form: a section of its own, a line a
+task carries, a check a decision passes, what a plan of that project may contain at all. Where
+it adds, a plan carries both, and where it is silent, this form alone holds. The `Records`
+section names the records a plan cites: the ones that bind a design, the ones that only explain
+it, and the judgements only the owner makes.
+
+`/planning:exec-plan` runs a plan in waves of parallel lanes. Three parts of the form serve
+that: a task's `After:` and `Needs:` lines, the Shared files table in Execution, and a task size
+that ends on the tests of what the task touched, the whole tree's tests running once after the
+last wave. A plan whose Execution names the light mode runs instead with one executor, a narrower
 check and one review agent; the Mode item of Execution says when a plan may.
 
 The form is shaped by where the expensive findings came from. A task that failed after
@@ -47,18 +49,19 @@ present with "none".
 
 One paragraph: the state of the tree and of the working loop when the plan is closed, and what
 it replaces. When the plan replaces a way of working, a before and after pair says what goes
-and what comes. The `Closes:` line names the `REQ-*` the plan proves and the `docs/backlog/`
-items it closes, or says "nothing" and why (tooling, a refactor, an upgrade). A plan closes a
-requirement only through a task whose `Result:` names it.
+and what comes. The `Closes:` line names what the plan closes, the requirements it proves and the
+issues or backlog items it resolves, in the form the `Plan form` section gives them, or says
+"nothing" and why (tooling, a refactor, an upgrade). A plan closes a requirement only through a
+task whose `Result:` names it.
 
 ### Owner Sign-off
 
 Everything the owner alone decides, written in plain words so the owner can answer without
-opening the tree. That is the five judgements the root `CLAUDE.md` reserves (admitting,
-deprecating or changing a requirement, its address, the admission bar), accepting or rewriting
-an accepted ADR, deleting an artifact an accepted requirement addresses, taking a tool out of
-the loop; with each, the consequence the owner accepts; and the steps the owner does by hand
-before, around or after the run (pushing `master`, a config outside the repo). At execution
+opening the tree. That is the judgements the `Records` section reserves to the owner,
+accepting or rewriting a record that binds, deleting an artifact a binding record depends on,
+taking a tool out of the loop; with each, the consequence the owner accepts; and the steps the
+owner does by hand before, around or after the run (pushing the trunk, a config outside the
+repo). At execution
 every line here is settled. The executor does not reopen it, and anything owner-level it meets
 that is not here stops the run.
 
@@ -71,9 +74,10 @@ make alone from the tree: it names the alternative it rejects. A detail the exec
 with the code in front of it, an error's wording, a helper's place, the shape of a test, is not a
 decision and goes into a task's checkbox or nowhere. Every choice of that first kind is here;
 none is left to "decide during implementation" or to a backlog item. Decisions drew most of the
-majors of the plan rounds, and every one is more text a round reads again. A decision that is the owner's goes in Owner
-Sign-off. A decision that touches an accepted `REQ-*` or ADR cites it and does not contradict
-it. A task cites the decisions it applies in its `Decision:` line, by number and not as a prose
+majors of the plan rounds, and every one is more text a round reads again. A decision that is
+the owner's goes in Owner Sign-off. A decision that touches a record the `Records` section names
+cites it and does not contradict it; a record this plan rewrites is held in its new text. A
+task cites the decisions it applies in its `Decision:` line, by number and not as a prose
 paragraph, so a decision no task applies
 is a finding. Every decision is proven by an acceptance in some task.
 
@@ -90,7 +94,7 @@ command that produced it.
 ### Invariants and Bounds
 
 Present when the plan touches a process that holds state between requests: a consumer window, a
-cache, a map in one replica, a KV bucket, a queue, a scheduled job. For each, the invariant
+cache, a map in one replica, a key-value bucket, a queue, a scheduled job. For each, the invariant
 (what is never true while it runs) and the bound (how much it holds, for how long, how many
 retries), stated so a check can fail on them. A bound this plan decides is stated with its
 number; a bound that already exists is named with the artifact that applies it. Every invariant
@@ -100,20 +104,22 @@ Present too when the plan sends a list or a batch across a boundary: an RPC answ
 that carries a list, a bulk call to an engine, a set of downloads or streams one press starts.
 For each, the receiver's limit by its anchor (a size, an item count, a slot count, a range of
 values), and what the sender does when the set is larger: pages, splits into batches, or
-refuses. Example: «проверка подписок одним bulk-запросом к движку авторизации: лимит элементов
-в одном запросе — в конфиге движка (якорь); больше — режем на пачки по лимиту». A list the
+refuses. Example: "subscriptions are checked with one bulk request to the authorization engine:
+the limit of items in one request is in the engine's config (anchor); a larger set is cut into
+batches at that limit". A list the
 sender bounds below the limit by construction names that bound and needs nothing more.
 
 ### Contracts and Data
 
 Present when the plan changes a wire contract (a proto, an OpenAPI fragment, a subject or a
 message) or a stored shape (a table, a column, a KV value, a file on disk). For each: the
-contract or shape by name; its owner artifact by link, the migration whose `CHECK` admits it,
-the `contracts/openapi/src/` fragment the clients are generated from, the proto, the Go package
-that provisions it; every reader and writer of the old shape that moves with it; and the task
-that touches the artifact. Not the values, the DDL or the field list: those are the owner's,
-and the plan names which task touches the artifact, not what the values are. The old shape
-stops existing in the same task; the root `CLAUDE.md` keeps nothing backward compatible.
+contract or shape by name; its owner artifact by link, the migration whose constraint admits
+it, the schema or contract file the clients are generated from, the module that provisions it;
+every reader and writer of the old shape that moves with it, found where the `Consumers`
+section says; and the task that touches the artifact. Not the values, the DDL or the field
+list: those are the owner's, and the plan names which task touches the artifact, not what the
+values are. The old shape stops existing in the task that moves its last reader and writer, or
+a decision says why it stays beside the new one and which task removes it.
 
 ### Out of Scope
 
@@ -123,15 +129,16 @@ joins the plan with its price. Out of Scope holds what the owner chose to leave.
 
 ### Execution
 
-- **Gate.** A link to the `CLAUDE.md` of each surface the plan touches, then only what this
-  plan does differently: docs-only (no Go, no `make generate`), deploy-only (verification is
+- **Gate.** A link to where the gate of each surface the plan touches is written, as the
+  `Gates` section names it, then only what this plan does differently: docs-only (no code, no
+  generators), deploy-only (verification is
   raising the contour, not tests), contract-only (honest `501` / `Unimplemented` stubs, no
   behavioural tests), or a per-task gate stricter than the default (test-first, reproducing a
   reported failure). A plan whose approach matches the gate says so in one line. The gate itself
   is never restated. The usual plan repeats the gate commands in each task.
-- **Environment.** What a run needs beyond the tree: a stand, a container, a binary on `PATH`,
-  credentials, `npm ci` in a fresh worktree, fetched model weights. The run's preflight reads
-  this once.
+- **Environment.** What a run needs beyond the tree and beyond what the `Environment` section
+  already states: a stand, a container, a binary on `PATH`, credentials, `npm ci` in a fresh
+  worktree, fetched model weights. The run's preflight reads this once.
 - **Barriers.** A barrier is a point nothing crosses until it holds: an owner's step, a
   neighbour's merge. The order of tasks is not written here: a task that waits for another says
   so in its own `After:` line, and a task with no `After:` line waits for nothing. Every commit
@@ -139,14 +146,16 @@ joins the plan with its price. Out of Scope holds what the owner chose to leave.
   the usual barrier task that lands it first.
 - **Shared files.** A table of every file two tasks of the plan edit: the file, the two tasks
   by title, and which one is second. The run merges the second task's lane after the first,
-  and the integrator reads this table before it merges anything. Generated output and the
-  coverage lines of the requirements are not listed: the integrator regenerates them. Two
+  and the integrator reads this table before it merges anything. Generated output is not
+  listed, nor what the `Plan form` section names as regenerated: the integrator regenerates
+  them. Two
   tasks that share a file and have no path between them in `After:` are a finding of the
   plan's review, not a case the run handles.
-- **Skills.** By surface the plan touches, from `.claude/skills/` as it stands when the plan is
-  written: `go-conventions` for Go, `add-migration` for a migration, `requirements`, `adr` and
-  `chapter` for those genres, `ts-conventions` for the console. Most of the owner's remarks on a review are conventions, and the
-  skills own them; the executor loads the skill of its task's surface before it edits.
+- **Skills.** By surface the plan touches, from the skills the project holds under
+  `.claude/skills/` and the installed plugins hold, as they stand when the plan is written: the
+  conventions of a language for its code, a migration skill for a migration, the skill of a
+  document's genre for that document. Most of the owner's remarks on a review are conventions,
+  and the skills own them; the executor loads the skill of its task's surface before it edits.
 - **Shared resources**, when the plan is one line of a parallel wave: the table of files another
   line of the same wave may touch, and the rule that serialises them (which line merges second
   and carries its edit onto the first's form; generated output is regenerated, never merged by
@@ -165,7 +174,7 @@ joins the plan with its price. Out of Scope holds what the owner chose to leave.
   full run, and a rename across a hundred files can be light. When one condition is in doubt,
   the plan is full. A light plan has the same sections as a full one. A section with nothing
   real in it says so in one line: a decision or an owner's line is never invented to fill it.
-  `/exec-plan` says what the light run skips and what it keeps.
+  `/planning:exec-plan` says what the light run skips and what it keeps.
 
 ### Implementation Steps
 
@@ -182,20 +191,21 @@ itself, and what needs a person goes here.
 ## A task
 
 ```markdown
-### Task 3: контракт и маршрут шлюза уходят одним коммитом
+### Task 3: the bulk export leaves the contract and the gateway in one commit
 
-Result: в `contracts/` и в контроллере шлюза нет арминга; сгенерированное перегенерировано.
+Result: no bulk export in the API contract or in the gateway's controller; generated code
+regenerated.
 
 Decision: D2, D5.
 
-Where: `contracts/proto/app-core/`, `contracts/openapi/src/`, `backend/internal/api-gateway/`.
+Where: `api/openapi/`, `internal/gateway/`.
 
-After: «главы описывают систему без арминга» (код приводится к документам).
+After: «the docs describe the system without the bulk export» (the code follows the docs).
 
-- [ ] фрагмент OpenAPI и сервис proto удалены; `make generate`
-- [ ] контроллер шлюза без маршрута арминга, в том же коммите
-- [ ] acceptance: `rg -n -i 'arming|арминг' contracts backend --glob '!**/generated/**'` пуст;
-      гейт `backend/CLAUDE.md` зелёный
+- [ ] the bulk export operation removed from the OpenAPI document; generators rerun
+- [ ] the gateway's controller without the bulk export route, in the same commit
+- [ ] acceptance: `rg -n -i 'bulk.?export' api internal --glob '!**/generated/**'` is empty;
+      the gate of the gateway is green
 ```
 
 - **Header.** `### Task N:` with the English word `Task`, an integer `N` counting from 1 in
@@ -203,15 +213,15 @@ After: «главы описывают систему без арминга» (�
   by this header and by nothing else, so `### Задача 1:`, `### T1.` or a header without the colon is a task
   that never runs.
 - **`Result:`** The state of the tree when the task is done, as something a reader can check.
-  A `REQ-*` or a backlog item the task closes is named here.
+  A requirement or a backlog item the task closes is named here.
 - **`Decision:`** The decisions the task applies, by number. A task that needs a decision the
   list does not have has found a hole in the plan; the decision is written into Decisions, not
   into the task.
-- **`Where:`** Packages, directories, areas: `backend/internal/device-gateway/`,
-  `.revmux/lenses/`, `docs/architecture/chapters/`, the alarm ADRs. Not files. The refresh
-  mode reads `git log` over these areas, and the executor finds the files. A rename or a
-  removal names every surface its inventory runs over, `docs/architecture/` included when the
-  `rg` covers `docs`: a hit there is the task's to remove. An area missing from `Where:` is one
+- **`Where:`** Packages, directories, areas: `internal/billing/`, `web/src/app/orders/`,
+  `docs/`, the decision records of the area. Not files. The refresh mode reads `git log` over
+  these areas, and the executor finds the files. A rename or a removal names every surface its
+  inventory runs over, the docs included when the `rg` covers them: a hit there is the task's
+  to remove. An area missing from `Where:` is one
   the Shared files table cannot see, and it is where most edits outside `Where:` in past runs
   landed.
 - **`After:`** The tasks this one waits for, each by its title in guillemets with the reason in
@@ -220,16 +230,17 @@ After: «главы описывают систему без арминга» (�
   names is closed, and starts together every task that is ready, so a task with no line runs in
   the first wave. Titles, never numbers: tasks are renumbered while the plan is reviewed, and a
   title survives it.
-- **`Needs:`** Something one at a time on the machine that the task uses: the compose stand, an
-  e2e lane. Absent for most tasks. The run never starts two tasks with the same `Needs:` in one
+- **`Needs:`** Something one at a time on the machine that the task uses: a local stand, an
+  end-to-end suite, what the `Environment` section names as used one at a time. Absent for most
+  tasks. The run never starts two tasks with the same `Needs:` in one
   wave.
 - **Checkboxes.** As many as the task needs. Each names a resulting state or an edit the
   executor recognises as done. A task that closes audit or review findings points each item at
-  the owning report (the domain report under `docs/architecture/reviews/`, the run archive of a
-  review round) and verifies the fix against that report, not against the summary in the plan.
+  the owning report (the review report that found it, the run archive of a review round) and
+  verifies the fix against that report, not against the summary in the plan.
 - **Acceptance.** The last checkboxes, each starting with `acceptance:`, each a check that can
   fail: a command and what its output must be. `rg ...` is empty; `rg` finds both paths;
-  `make -C docs check` is green; `git check-ignore --no-index -v <path>` catches the path, or
+  the docs check is green; `git check-ignore --no-index -v <path>` catches the path, or
   does not. "Verify it works" is not acceptance. That something exists or works is proven by a
   test or a gate, never by `rg` for a name: the executor chooses identifiers and files, and an
   acceptance that pins a name or a file the tree does not hold today goes red on a task that
@@ -238,8 +249,8 @@ After: «главы описывают систему без арминга» (�
 - **Inventory**, for a rename or a removal only. The `rg` set of terms in every spelling the
   tree could hold: the identifier's casings and its snake, kebab and camel forms, the JSON and
   proto field names, the word in English and in the plan's language, plurals; the surfaces it
-  runs over (`backend`, `frontend`, `contracts`, `deploy`, `docs`, `.claude`); and the globs
-  that exclude generated output. The acceptance is that inventory empty, or reporting only the
+  runs over, every top-level area that could hold the term, the docs and `.claude` included, as
+  the `Consumers` section names them; and the globs that exclude generated output. The acceptance is that inventory empty, or reporting only the
   foreign meanings the plan names. A task that adds or changes something carries no inventory.
 - **Size.** A task ends with the tree building and the tests of the packages it touched green,
   because it ends in a commit and the hooks run on that commit; and it fits one session of one
@@ -264,11 +275,11 @@ premise: quote the line, not its position.
 - Function signatures, type shapes, SQL text, field lists, config values. A decision or an
   invariant says what must hold; the value belongs to the artifact that applies it, and the
   migration, fragment or package that owns it is named in Contracts and Data.
-- Test names. A task says what must be proven and which `REQ-*` a marker cites; the executor
-  names the test.
+- Test names. A task says what must be proven, and which requirement a test cites when the
+  `Plan form` section marks tests by requirement; the executor names the test.
 - Counts: "14 files", "x4", "three readers". They are wrong after the first commit. Write the
   set, or the inventory command that finds it.
-- `master@<sha>`, or "checked against commit X". Premises carry anchors, and the commit that
+- `<trunk>@<sha>`, or "checked against commit X". Premises carry anchors, and the commit that
   carries the plan is its date.
 - A discovery dump: quotes of the tree pasted as context. A premise is a fact with an anchor;
   the rest of what discovery read is not written down.
@@ -290,6 +301,6 @@ premise: quote the line, not its position.
 
 ## Language
 
-The headers are the English strings above. The body is in the plan's language: recent plans
-are Russian, older ones English. Match the document you are editing and never switch mid-plan;
+The headers are the English strings above. The body is in the plan's language, the language
+of the request that started it. Match the document you are editing and never switch mid-plan;
 a refresh keeps the language it finds.

@@ -42,8 +42,10 @@ passes it by this absolute path.
    Code, a second session of the same account that builds its own version of every fork, its
    turns paid like this session's; Codex, the same work by another model, which catches what
    two Claudes agree on by habit and which the Claude Code skills of the project do not bind.
-   It is a question about the session and not about the design, so it does not wait for the
-   facts.
+   It is a closed question, asked as
+   [`../../references/questions.md`](../../references/questions.md) says, no peer first; the
+   free line takes the owner's own words, a model for the Claude peer among them. It is a
+   question about the session and not about the design, so it does not wait for the facts.
 1. **Frame.** What the owner wants to have at the end: a mechanism, a contract, a boundary, a
    removal. One question, skipped when the request already says it.
 2. **Context and facts**, below. Nothing is asked before they are read. The step opens with the
@@ -208,11 +210,13 @@ without a question the owner answered or a request the owner made. The go for re
 When everything seems settled, ask «есть ли ещё вопросы, что осталось нерешённым?». Only
 after "no" comes the summary, short: the decisions in the owner's words, the unresolved, and
 the agent's own proposals apart from both. The owner confirms it, or edits it and confirms.
-Then one question with three items:
+Then one closed question with three items, asked as
+[`../../references/questions.md`](../../references/questions.md) says:
 
 1. stop;
 2. `/planning:make-plan` with this summary as its input;
-3. save the summary to a file, at the path the owner names with the choice.
+3. save the summary to a file. A path in the free line picks this item. When the owner picks
+   the item without a path, the next message asks for it.
 
 There is no fourth item, and "start now" is not one.
 

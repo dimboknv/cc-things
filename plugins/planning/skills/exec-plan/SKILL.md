@@ -356,6 +356,10 @@ answers, each with what it costs:
   The Claude Code hooks and skills of the project do not bind it, and the status page does not
   count its tokens.
 
+It is a closed question, asked as
+[`../../references/questions.md`](../../references/questions.md) says, no peer first; the free
+line takes the owner's own words, a model for the Claude peer among them.
+
 A continuation asks nothing: the journal says whether the run has a peer.
 
 **The repositories.** Read every task's `Repo:` line and list the repositories of the plan as

@@ -225,6 +225,12 @@ One question, five items for a tracked plan, the recommended item first and mark
 
 An untracked plan is never committed, so its menu has four items: commit is not offered.
 
+The menu is a closed question, asked as
+[`../../references/questions.md`](../../references/questions.md) says; the free line takes an
+edit the owner wants first. In AskUserQuestion the five items of a tracked plan drop done, which
+the owner gives in the free field. A verdict the menu comes back with is said in the reply
+before it opens.
+
 For a plan no review has read, the round is the recommendation; for a light plan it is the
 agent, listed first, and the round stays on the menu for the owner to pick. After a review
 (items 1 to 3) the menu comes back with the verdict from "Review findings" below and the item it

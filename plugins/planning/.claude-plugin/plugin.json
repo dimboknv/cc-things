@@ -1,7 +1,7 @@
 {
   "name": "planning",
   "description": "Design a change fork by fork, write a plan checked against the tree, and run it in parallel lanes",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": {
     "name": "dimboknv"
   },

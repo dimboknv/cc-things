@@ -1,7 +1,8 @@
 # The fork page: markup and answer
 
-`scripts/fork.py show <fragment>` puts the fragment into the shell
-[`assets/fork.html`](assets/fork.html) and opens the result in the agterm overlay. The shell
+`<skill dir>/scripts/fork.py show <fragment>` puts the fragment into the shell
+[`assets/fork.html`](assets/fork.html) and opens the result in the agterm overlay. `<skill dir>`
+is the absolute path [SKILL.md](SKILL.md) gives, here and for `fork.py result` below. The shell
 owns the look, the choice, the comment fields and the answer. The fragment owns the content.
 Write the fragment to the scratchpad as `fork-<n>.html`; the built page lands beside it.
 
@@ -63,7 +64,7 @@ part of this option). An edge is `[from, to, kind, step]`: `kind` is `""`, `"new
 `"gone"`, and `step` is the number of the scenario step the arrow carries, left out for an
 arrow outside the scenario.
 
-**Anything else**, states, a place where data lives, the operator's screen, is an inline
+**Anything else**, states, a place where data lives, the user's screen, is an inline
 `<svg>` with a `viewBox`, written by hand. The shell's classes keep it in the theme:
 `node`, `node new`, `node off` on a `<g>` holding a `<rect>` and a `<text>`; `edge`,
 `edge new`, `edge gone` on a `<line>` or a `<path>`, which also draws the arrowhead. Colours

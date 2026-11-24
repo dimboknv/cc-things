@@ -25,11 +25,12 @@ Two agents that read the same files in the same order reach the same answer, and
 agreement proves nothing. So they read in a different order and do not see each other's work
 until both have written theirs down:
 
-- the lead reads **from the tree outward**, as `brainstorm` says: memory, glossary, the code
-  and its requirements, ADRs and chapters, then the outside systems the options touch;
-- the peer reads **from the outside inward**: the PRD, the reference console, how the
-  industry, the engine's own documentation, Hik or another VMS does the thing, and what the
-  plainest shape would be if nothing existed yet. The tree comes last.
+- the lead reads **from the tree outward**, as `brainstorm` says: memory, the project rules,
+  the glossary, the code and the records that bind or explain it, then the outside systems the
+  options touch;
+- the peer reads **from the outside inward**: the product requirements, the reference product,
+  how the industry, the engine's own documentation or another product does the thing, and what
+  the plainest shape would be if nothing existed yet. The tree comes last.
 
 ## Start
 
@@ -37,11 +38,12 @@ Picking a peer is the owner's go for the peer and for every exchange with it. An
 agent or research still waits for a go of its own, as in `brainstorm`.
 
 The owner picked the peer in the request or in the first question of the run: Claude Code or
-Codex. After the frame is known, start it:
+Codex. After the frame is known, start it, `<skill dir>` being the absolute path
+[SKILL.md](SKILL.md) gives:
 
 ```bash
-.claude/skills/brainstorm/scripts/peer.sh .claude/skills/brainstorm/peer.md claude
-.claude/skills/brainstorm/scripts/peer.sh .claude/skills/brainstorm/peer.md codex
+<skill dir>/scripts/peer.sh <skill dir>/peer.md claude
+<skill dir>/scripts/peer.sh <skill dir>/peer.md codex
 ```
 
 Either agent runs on the model its own configuration picks. A model id after `claude` is
@@ -64,7 +66,7 @@ the last line says what reply is expected and whether the lead waits for it, or
 
 | Tag | The lead sends | The peer returns |
 |---|---|---|
-| `frame` | The owner's words, word for word: the request, the answer to the frame question, and what the owner said earlier in the session that bears on it. The path of the lead's transcript. Nothing the lead read or concluded | Its own list of forks with the facts behind each, what the tree or a stated rule already settles, and the zero fork: the premise the frame stands on |
+| `frame` | The owner's words, word for word: the request, the answer to the frame question, and what the owner said earlier in the session that bears on it. The path of the lead's transcript. The path of the project rules file, from the `<!-- rules: … -->` line `rules.sh` printed, or that there is none. Nothing the lead read or concluded | Its own list of forks with the facts behind each, what the tree or a stated rule already settles, and the zero fork: the premise the frame stands on |
 | `options` | The merged, numbered list of forks, and which of them to build now: every fork whose question does not depend on an answer still to come. No draft and no hint | One message per fork, as each is ready: its options, scenarios, prices and recommendation |
 | `clash N/M` | The lead's full draft of the fork as the owner would get it, for a fork page the path of its fragment file, and every difference from the peer's version | For each difference a concession or something new; the words and numbers of the draft checked; the attack on the recommendation |
 | `answer` | Every reply of the owner that is more than a pick, word for word, and the pick itself with the lead's restatement. The answer of a fork page goes as the JSON the page returned | Depends on what the reply is, below |
@@ -176,7 +178,7 @@ for its cost.
 
 | Mistake | Fix |
 |---|---|
-| Sent the peer the lead's reading of the tree with `frame` | The owner's words and the transcript path only |
+| Sent the peer the lead's reading of the tree with `frame` | The owner's words, the transcript path and the rules path only |
 | Sent the lead's draft with the `options` request | The numbered list and which forks to build |
 | Read the peer's reply before writing the lead's own version | Write it to the scratchpad in the turn that sends the request |
 | Showed the owner a draft, or its "today" part, while the peer was still working | One line on what the peer was asked |

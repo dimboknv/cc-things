@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """Draws the state of a plan run as one HTML page and shows it under the run's agterm session.
 
-usage: status.py <slug> [--open | --watch]
+usage: EXEC_PLAN_JOURNAL=<journal> status.py [--open | --watch]
 
-The page is a view of two things the run already keeps: the journal .exec-plan/<slug>/progress.md
-and the checkboxes of the plan. A closed task is read from the plan in the run's checkout, an open
-one from the copy in its lane's worktree when that worktree exists, so a lane's ticks show before
-its wave is integrated. The page holds no state of its own and nothing reads it back.
+The journal is the run's directory, given as an absolute path; its name is the run's slug. The
+page is a view of what the run already keeps there and of the checkboxes of the plan: progress.md,
+the log; plan, the plan's path at the start of the run; repos, one line per repository of the
+plan, `<repo> <main checkout> <run worktree> <branch>`; base.<repo>; and lanes/task-<N>.md, the
+section of a task its lane ticks. A task of a running wave is read from its lane's file, so a
+lane's ticks show before its wave is integrated; any other task, and every task of a light run,
+which has no lane files, is read from the plan: the path in plan, which for a tracked plan is its
+copy in the home repository's run worktree, then the path the finalize line names once the plan is
+closed. The whole-tree checks, the review rounds and the finalize name the repository they ran in,
+and the page shows them per repository. The page holds no state of its own and nothing reads it
+back.
 
-Every call writes .exec-plan/<slug>/status.html and, beside it, status.js with the same content
+Every call writes status.html into the journal and, beside it, status.js with the same content
 as data. An open page pulls status.js every five seconds and replaces its content in place, so it
 is never reloaded and keeps its scroll position. In an agterm session --open shows the page as a
-page companion of that session and records the companion's id in .exec-plan/<slug>/status-page.
+page companion of that session and records the companion's id in the journal's status-page.
 Outside agterm only the files are written.
 
 A journal line comes minutes apart, and the tokens and the checkboxes of a working lane move in
@@ -20,9 +27,11 @@ ten seconds. The watcher lives as long as somebody can look: it ends when the ru
 and when the page it draws for is gone.
 
 The model, the context, the turns and the tokens of a lane, input with its cached part and output, come from the transcript Claude Code keeps of
-every subagent: a transcript belongs to the run when its prompt names the run's journal slug. The
+every subagent: a transcript belongs to the run when its prompt names the run's journal or one of
+its worktrees. The transcripts are looked for in the project directory of every session recorded
+as the lead, and in that of the directory that holds the journal's .exec-plan. The
 session that leads the run and the peer of a run that has one are sessions of their own: the lead
-is known by the id --open records in .exec-plan/<slug>/lead and is counted over the time of the run;
+is known by the id --open records in the journal's lead and is counted over the time of the run;
 the peer is known by its brief and is counted whole, from the council before the go. Both come with
 the mail they sent each other.
 
@@ -51,20 +60,37 @@ WAVE_START = re.compile(r"^wave (\d+): started, tasks (.*)$")
 WAVE_DONE = re.compile(r"^wave (\d+): integrated, (.*)$")
 # a lane's report, not the line it logs before a long command
 LANE_DONE = re.compile(r"^task (\d+): (?!running .*, about \S+ min$)")
-RUN_START = re.compile(r"^run started: (\S+), ")
 PLAN_CLOSED = re.compile(r"^finalize: plan closed, (\S+)")
 # the end of a whole-tree check; its other lines, the one before a long command among them, are not
-CHECK_DONE = re.compile(r"^whole tree: ((?:green|red)\b.*)$")
+CHECK_DONE = re.compile(r"^whole tree: (\S+): ((?:green|red)\b.*)$")
+CHECK_START = re.compile(r"^whole tree: (\S+): started")
+FINALIZE_IN = re.compile(r"^finalize: ([^\s:,]+): (.*)$")
+REPO = re.compile(r"^Repo:[ \t]*(.*)$")
+SPAN = re.compile(r"`([^`]+)`")
 
 
-def main_checkout() -> Path:
-    common = subprocess.run(
-        ["git", "rev-parse", "--git-common-dir"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
-    return (Path(common) / "..").resolve()
+def journal_dir() -> Path:
+    """journal_dir is the run's journal as EXEC_PLAN_JOURNAL names it; nothing else names it."""
+    given = os.environ.get("EXEC_PLAN_JOURNAL", "")
+    if not given:
+        raise SystemExit("status.py: EXEC_PLAN_JOURNAL is not set")
+    if not os.path.isabs(given):
+        raise SystemExit(f"status.py: EXEC_PLAN_JOURNAL is not an absolute path: '{given}'")
+    return Path(given)
+
+
+def read_repos(journal: Path) -> list[dict]:
+    """read_repos lists the repositories of the run: name, main checkout, run worktree, branch."""
+    try:
+        text = (journal / "repos").read_text(encoding="utf-8")
+    except OSError:
+        return []
+    repos = []
+    for raw in text.splitlines():
+        parts = raw.split()
+        if len(parts) == 4:
+            repos.append(dict(zip(("name", "main", "worktree", "branch"), parts)))
+    return repos
 
 
 def read_journal(path: Path) -> list[tuple[datetime, str]]:
@@ -77,7 +103,8 @@ def read_journal(path: Path) -> list[tuple[datetime, str]]:
 
 
 def read_tasks(plan: Path) -> dict[int, dict]:
-    """read_tasks returns each task section of a plan: its title, checkboxes, stop mark and After text."""
+    """read_tasks returns each task section of a plan: its title, checkboxes, stop mark, After
+    text and the repository its Repo line names, "" without one."""
     tasks: dict[int, dict] = {}
     cur = None
     in_after = False
@@ -90,6 +117,7 @@ def read_tasks(plan: Path) -> dict[int, dict]:
                 "total": 0,
                 "stopped": False,
                 "after": "",
+                "repo": "",
                 "items": [],
             }
             tasks[int(head.group(1))] = cur
@@ -115,6 +143,11 @@ def read_tasks(plan: Path) -> dict[int, dict]:
                 }
             )
             continue
+        if repo := REPO.match(raw):
+            # ``Repo: `<dir>`.``: the first code span, or else the bare word without its period
+            span = SPAN.search(repo.group(1))
+            given = span.group(1) if span else repo.group(1).strip().rstrip(".")
+            cur["repo"] = given.strip().rstrip("/")
         if raw.startswith("After:"):
             in_after = True
         elif not raw.strip():
@@ -124,18 +157,28 @@ def read_tasks(plan: Path) -> dict[int, dict]:
     return tasks
 
 
-def find_plan(main: Path, slug: str, rel: str, closed: str) -> Path | None:
-    """find_plan follows the plan from the run's checkout to the path the close moved it to, which
-    the finalize's journal line names."""
-    run = main / ".claude" / "worktrees" / slug
-    candidates = [run / rel]
-    if closed:
-        candidates += [run / closed, main / closed]
-    candidates.append(main / rel)
-    for path in candidates:
+def find_plan(plan: str, closed: str) -> Path | None:
+    """find_plan follows the plan from its path at the start of the run to the path the close
+    moved it to, which the finalize's journal line names."""
+    for path in [Path(closed)] * bool(closed) + [Path(plan)]:
         if path.is_file():
             return path
     return None
+
+
+def home_repo(plan: str, repos: list[dict]) -> str:
+    """home_repo names the repository a task without a Repo line belongs to: the only one, or the
+    one whose checkout holds the plan; a plan outside git has none."""
+    if len(repos) == 1:
+        return repos[0]["name"]
+    for repo in repos:
+        for root in (repo["main"], repo["worktree"]):
+            try:
+                Path(plan).relative_to(root)
+            except ValueError:
+                continue
+            return repo["name"]
+    return ""
 
 
 def after_of(tasks: dict[int, dict], n: int) -> list[int]:
@@ -165,7 +208,9 @@ KINDS = [
     ("check", re.compile(r"Every task of a plan is done")),
     (
         "fixer",
-        re.compile(r"You are sorting and fixing what review round (\d+-[a-z-]+)?"),
+        re.compile(
+            r"You are sorting and fixing what review round ((?:[\w.-]+/)?\d+-[a-z-]+)?"
+        ),
     ),
     ("finalize", re.compile(r"You are closing a plan run")),
 ]
@@ -279,12 +324,27 @@ def read_transcript(
     }
 
 
-def project_dir(main: Path) -> Path:
+def leads_of(journal: Path) -> list[str]:
+    record = journal / "lead"
+    return record.read_text().split() if record.is_file() else []
+
+
+def project_dirs(journal: Path) -> list[Path]:
+    """project_dirs are the directories Claude Code keeps the run's transcripts in: the one of
+    every session recorded as the lead, which a run across repositories starts from the directory
+    that holds them all, and the one of the directory that holds the journal's .exec-plan."""
     config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
-    return config / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(main))
+    projects = config / "projects"
+    found = [
+        path.parent
+        for i in leads_of(journal)
+        for path in projects.glob(f"*/{i}.jsonl")
+    ]
+    found.append(projects / re.sub(r"[^A-Za-z0-9]", "-", str(journal.parent.parent)))
+    return list(dict.fromkeys(found))
 
 
-def agents(main: Path, slug: str, since: datetime) -> list[dict]:
+def agents(journal: Path, since: datetime) -> list[dict]:
     """agents reads the run's subagents out of their transcripts: kind, task or wave, model, tokens.
 
     The transcript also holds every tool call with its time and its result, so an agent's gate
@@ -293,11 +353,15 @@ def agents(main: Path, slug: str, since: datetime) -> list[dict]:
     # A lead that hands the prompt over as the template file leaves its placeholders in the
     # transcript and gives the values in its message, so the run is also known by its checkouts.
     # Another run's slug can begin with this one.
+    slug = journal.name
     named = re.compile(
-        rf"(?:journal slug is |\.claude/worktrees/){re.escape(slug)}(?:-task-(\d+))?(?![A-Za-z0-9._-])"
+        rf"(?:{re.escape(str(journal))}(?:/lanes/task-(\d+)\.md)?|\.claude/worktrees/{re.escape(slug)}"
+        rf"(?:-task-(\d+))?)(?![A-Za-z0-9._-])"
     )
     found = []
-    for path in project_dir(main).glob("*/subagents/agent-*.jsonl"):
+    for path in (
+        p for d in project_dirs(journal) for p in d.glob("*/subagents/agent-*.jsonl")
+    ):
         try:
             if path.stat().st_mtime < since.timestamp():
                 continue
@@ -316,13 +380,23 @@ def agents(main: Path, slug: str, since: datetime) -> list[dict]:
                 )
                 if hit is None:
                     continue
-                checkout = re.search(r"- checkout: \S*-task-(\d+) ", prompt) or next(
-                    (m for m in named.finditer(prompt) if m.group(1)), None
+                checkout = re.search(r"- checkout: \S*-task-(\d+) ", prompt)
+                lane = (
+                    int(checkout.group(1))
+                    if checkout
+                    else next(
+                        (
+                            int(m.group(1) or m.group(2))
+                            for m in named.finditer(prompt)
+                            if m.group(1) or m.group(2)
+                        ),
+                        None,
+                    )
                 )
                 named_round = hit.group(1) if kind == "fixer" else None
                 if kind == "fixer" and not named_round:
                     in_text = re.search(
-                        r"\b(\d\d-(?:initial|after-fix|final))\b", prompt
+                        r"((?:[\w.-]+/)?\d\d-(?:initial|after-fix|final))\b", prompt
                     )
                     named_round = in_text.group(1) if in_text else None
                 read = read_transcript((*head, *lines))
@@ -331,7 +405,7 @@ def agents(main: Path, slug: str, since: datetime) -> list[dict]:
         found.append(
             {
                 "kind": kind,
-                "task": int(checkout.group(1)) if kind == "lane" and checkout else None,
+                "task": lane if kind == "lane" else None,
                 "wave": int(hit.group(1))
                 if kind == "integrate" and hit.group(1)
                 else None,
@@ -355,9 +429,7 @@ def first_stamp(path: Path) -> datetime | None:
     return None
 
 
-def sessions(
-    main: Path, slug: str, plan: str, since: datetime, until: datetime
-) -> list[dict]:
+def sessions(journal: Path, plan: str, since: datetime, until: datetime) -> list[dict]:
     """sessions reads the two agents that are sessions of their own: the lead and its peer.
 
     The lead is the session that wrote the run's first line; --open records its id. It lives
@@ -368,22 +440,19 @@ def sessions(
     for the run, in the council before the go and so before the run's first line, and is counted
     whole up to `until`.
     """
-    project = project_dir(main)
+    projects = project_dirs(journal)
     found = []
-    record = main / ".exec-plan" / slug / "lead"
-    leads = record.read_text().split() if record.is_file() else []
+    leads = leads_of(journal)
+    lead_paths = [p for d in projects for i in leads if (p := d / f"{i}.jsonl").is_file()]
     # The lead starts the peer, so a transcript last written before the lead began is not it.
-    born = min(
-        (s for i in leads if (s := first_stamp(project / f"{i}.jsonl"))),
-        default=since,
-    )
-    journal = f".exec-plan/{slug}/"
+    born = min((s for p in lead_paths if (s := first_stamp(p))), default=since)
+    named = f".exec-plan/{journal.name}/"
 
     def names_run(line: str) -> bool:
-        return journal in line or bool(plan and plan in line and PEER_MAIL in line)
+        return named in line or bool(plan and plan in line and PEER_MAIL in line)
 
     peers = []
-    for path in project.glob("*.jsonl"):
+    for path in (p for d in projects for p in d.glob("*.jsonl")):
         try:
             if path.stem in leads or path.stat().st_mtime < born.timestamp():
                 continue
@@ -398,7 +467,7 @@ def sessions(
         except OSError:
             continue
     for who, paths, start in (
-        ("lead", [project / f"{i}.jsonl" for i in leads], since),
+        ("lead", lead_paths, since),
         ("peer", peers, None),
     ):
         for path in paths:
@@ -412,8 +481,9 @@ def sessions(
     return found
 
 
-ROUND = re.compile(r"^review round (\d+-[a-z-]+?)(?: fixer)?: (.*)$")
-SORTED = re.compile(r"^review (\d+-[a-z-]+)(?:, profile \w+)?: (.*)$")
+# a round is named <repo>/<run>: revmux runs once per repository
+ROUND = re.compile(r"^review round ([^/\s]+/\d+-[a-z-]+?)(?: fixer)?: (.*)$")
+SORTED = re.compile(r"^review ([^/\s]+/\d+-[a-z-]+)(?:, profile \w+)?: (.*)$")
 FOUND = re.compile(r"(\d+) critical, (\d+) major, (\d+) minor(?:, degraded none)?,? ?")
 
 
@@ -449,12 +519,16 @@ def stages(journal: list[tuple[datetime, str]], spent: list[dict]) -> dict:
         )
 
     for at, text in journal:
-        if text.startswith("whole tree: started"):
-            checks.append({"began": at, "ended": None, "result": ""})
+        if m := CHECK_START.match(text):
+            checks.append({"repo": m.group(1), "began": at, "ended": None, "result": ""})
         elif m := CHECK_DONE.match(text):
-            if not checks or checks[-1]["ended"]:
-                checks.append({"began": at})
-            checks[-1].update(ended=at, result=m.group(1))
+            open_ = [
+                c for c in checks if c["repo"] == m.group(1) and c["ended"] is None
+            ]
+            if not open_:
+                open_ = [{"repo": m.group(1), "began": at}]
+                checks.append(open_[0])
+            open_[-1].update(ended=at, result=m.group(2))
             mark = at
         elif m := ROUND.match(text):
             rnd, rest = round_of(m.group(1)), m.group(2)
@@ -475,12 +549,18 @@ def stages(journal: list[tuple[datetime, str]], spent: list[dict]) -> dict:
             mark = at
         elif text.startswith("run continued"):
             mark = at
+        elif m := FINALIZE_IN.match(text):
+            finalize.append((at, m.group(1), m.group(2)))
         elif text.startswith("finalize: "):
-            finalize.append((at, text[len("finalize: ") :]))
+            finalize.append((at, "", text[len("finalize: ") :]))
 
     for a in spent:
-        if a["kind"] == "fixer" and a["round"] in rounds:
-            rounds[a["round"]]["fixers"].append(a)
+        if a["kind"] != "fixer" or not a["round"]:
+            continue
+        # a fixer whose prompt names the run without the repository fits only an unshared name
+        fits = [n for n in rounds if n == a["round"] or n.split("/", 1)[1] == a["round"]]
+        if len(fits) == 1:
+            rounds[fits[0]]["fixers"].append(a)
     for check, a in zip(checks, [a for a in spent if a["kind"] == "check"]):
         check["agent"] = a
     return {
@@ -515,24 +595,29 @@ def spell(seconds: float) -> str:
     return f"{minutes // 60}h {minutes % 60:02d}m" if minutes >= 60 else f"{minutes}m"
 
 
-def collect(main: Path, slug: str, now: datetime) -> dict:
-    journal = read_journal(main / ".exec-plan" / slug / "progress.md")
+def collect(jdir: Path, now: datetime) -> dict:
+    slug = jdir.name
+    journal = read_journal(jdir / "progress.md")
     if not journal:
-        raise SystemExit(f"status.py: no journal for '{slug}'")
+        raise SystemExit(f"status.py: no journal lines in {jdir / 'progress.md'}")
 
-    plan_rel = next(
-        (m.group(1) for _, text in journal if (m := RUN_START.match(text))), ""
-    )
+    try:
+        plan_path = (jdir / "plan").read_text(encoding="utf-8").strip()
+    except OSError:
+        plan_path = ""
     plan_closed = next(
         (m.group(1) for _, text in journal if (m := PLAN_CLOSED.match(text))), ""
     )
-    plan = find_plan(main, slug, plan_rel, plan_closed) if plan_rel else None
+    repos = read_repos(jdir)
+    plan = find_plan(plan_path, plan_closed) if plan_path else None
     tasks = read_tasks(plan) if plan else {}
+    home = home_repo(plan_path, repos)
 
     waves: dict[int, dict] = {}
     reported: dict[int, datetime] = {}
     reports: dict[int, list[datetime]] = {}
     phase = "started"
+    verdict: dict[str, bool] = {}
     stop_line = ""
     resumed = datetime.min
 
@@ -573,10 +658,16 @@ def collect(main: Path, slug: str, now: datetime) -> dict:
             phase, stop_line = "stopped", text
         elif text.startswith("run continued"):
             phase, stop_line, resumed = "continued", "", at
-        elif text.startswith("whole tree: started"):
-            phase = "whole-tree check"
-        elif text.startswith("whole tree: green"):
-            phase = "whole tree green, review next"
+        elif m := CHECK_START.match(text):
+            phase = f"whole-tree check, {m.group(1)}"
+        elif m := CHECK_DONE.match(text):
+            verdict[m.group(1)] = m.group(2).startswith("green")
+            # the review follows once the last check of every repository of the run is green
+            names = [r["name"] for r in repos] or list(verdict)
+            if all(verdict.get(n) for n in names):
+                phase = "whole tree green, review next"
+            elif verdict[m.group(1)]:
+                phase = f"whole tree: {m.group(1)} green"
         elif text.startswith("review round "):
             phase = "review " + text[len("review round ") :].split(":")[0]
         elif text.startswith("finalize: plan closed"):
@@ -615,7 +706,7 @@ def collect(main: Path, slug: str, now: datetime) -> dict:
                     (back[0] if back else end) - wave["started"]
                 ).total_seconds()
 
-    spent = agents(main, slug, journal[0][0])
+    spent = agents(jdir, journal[0][0])
     order = sorted(waves)
     for a in spent:
         if a["kind"] in ("lane", "integrate") and a["wave"] is None:
@@ -641,7 +732,7 @@ def collect(main: Path, slug: str, now: datetime) -> dict:
         wave["merging"] = max(back) if back and not wave["live"] else None
 
     # A run with a peer keeps the peer's findings on a wave beside the journal.
-    review = main / ".exec-plan" / slug / "review"
+    review = jdir / "review"
     for n, wave in waves.items():
         wave["peer"] = None
         try:
@@ -652,14 +743,15 @@ def collect(main: Path, slug: str, now: datetime) -> dict:
                 wave["peer"] = "asked, no answer yet"
 
     over = journal[-1][0] if phase in ("closed", "stopped") else now
-    own = sessions(main, slug, plan_rel, journal[0][0], over)
+    own = sessions(jdir, Path(plan_path).name, journal[0][0], over)
 
     rows = []
     for n in sorted(tasks):
         task = tasks[n]
+        repo = task["repo"] or home
         state = "waiting"
         if n in in_lane:
-            lane = main / ".claude" / "worktrees" / f"{slug}-task-{n}" / plan_rel
+            lane = jdir / "lanes" / f"task-{n}.md"
             if lane.is_file():
                 task = read_tasks(lane).get(n, task)
             back = reported.get(n, datetime.min) >= waves[running]["started"]
@@ -676,6 +768,7 @@ def collect(main: Path, slug: str, now: datetime) -> dict:
             {
                 "n": n,
                 "title": task["title"],
+                "repo": repo,
                 "done": task["done"],
                 "total": task["total"],
                 "state": state,
@@ -712,7 +805,13 @@ def collect(main: Path, slug: str, now: datetime) -> dict:
 
     return {
         "slug": slug,
-        "plan": plan_rel,
+        "plan": plan_path,
+        "repos": [
+            {**r, "base": (jdir / f"base.{r['name']}").read_text().strip()[:12]}
+            if (jdir / f"base.{r['name']}").is_file()
+            else {**r, "base": ""}
+            for r in repos
+        ],
         "phase": phase,
         "stop_line": stop_line,
         "started": journal[0][0],
@@ -888,12 +987,27 @@ def render(run: dict, now: datetime) -> str:
     def boxes_cell(r: dict) -> str:
         return f"<td class='num'>{r['done']}/{r['total']}</td>"
 
+    several = len(run["repos"]) > 1
+
     def named(n: int, r: dict | None) -> str:
-        text = f"task {n}: {r['title']}" if r else f"task {n}"
+        where = f" ({r['repo']})" if r and several and r["repo"] else ""
+        text = f"task {n}{where}: {r['title']}" if r else f"task {n}"
         return f"<td title='{esc(text)}'>{esc(text)}</td>"
 
     def state_cell(r: dict) -> str:
         return f"<td class='state {r['state'].replace(' ', '-')}'>{r['state']}</td>"
+
+    if run["repos"]:
+        out.append(
+            "<h2>Repositories</h2><table><tr><th>repo</th><th>branch</th><th>base</th>"
+            "<th>run worktree</th></tr>"
+        )
+        out += [
+            f"<tr><td>{esc(r['name'])}</td><td>{esc(r['branch'])}</td>"
+            f"<td class='dim'>{esc(r['base'])}</td><td class='dim'>{esc(r['worktree'])}</td></tr>"
+            for r in run["repos"]
+        ]
+        out.append("</table>")
 
     if run["sessions"]:
         out.append(
@@ -1003,7 +1117,7 @@ def render(run: dict, now: datetime) -> str:
     out.append("</table>")
     if not rows:
         out.append(
-            "<div class='dim'>the plan was not found from the journal's first line</div>"
+            "<div class='dim'>the plan the journal's plan file names was not found</div>"
         )
 
     def tokens(agents: list[dict]) -> str:
@@ -1016,18 +1130,19 @@ def render(run: dict, now: datetime) -> str:
     going = run["phase"] not in ("closed", "stopped")
     if run["checks"]:
         out.append(
-            "<h2>Whole tree</h2><table><tr><th>start</th><th class='num'>time</th><th>result</th>"
-            "<th class='num'>turns</th><th class='num'>in</th><th class='num'>out</th></tr>"
+            "<h2>Whole tree</h2><table><tr><th>repo</th><th>start</th><th class='num'>time</th>"
+            "<th>result</th><th class='num'>turns</th><th class='num'>in</th><th class='num'>out</th></tr>"
         )
         for check in run["checks"]:
-            last = check is run["checks"][-1]
+            last = check is [c for c in run["checks"] if c["repo"] == check["repo"]][-1]
             time = (
                 span(check["began"], check["ended"])
                 if check["ended"]
                 else (took(0, check["began"]) if going and last else "")
             )
             out.append(
-                f"<tr><td class='at'>{check['began']:%H:%M}</td><td class='num'>{time}</td>"
+                f"<tr><td>{esc(check['repo'])}</td>"
+                f"<td class='at'>{check['began']:%H:%M}</td><td class='num'>{time}</td>"
                 f"<td>{esc(check.get('result') or 'running')}</td>"
                 f"{tokens([check['agent']] if 'agent' in check else [])}</tr>"
             )
@@ -1042,7 +1157,7 @@ def render(run: dict, now: datetime) -> str:
                 else:
                     continue
                 out.append(
-                    f"<tr class='part'><td></td><td class='num'>{time}</td>"
+                    f"<tr class='part'><td></td><td></td><td class='num'>{time}</td>"
                     f"<td>{esc(step['label'])}</td>"
                     f"<td class='state {'stopped' if result == 'failed' else 'dim'}'>{result}</td><td></td></tr>"
                 )
@@ -1052,14 +1167,15 @@ def render(run: dict, now: datetime) -> str:
     waiting = going and run["phase"].startswith("whole tree green")
     if names or waiting:
         out.append(
-            "<h2>Review rounds</h2><table><tr><th>round</th><th>profile</th>"
+            "<h2>Review rounds</h2><table><tr><th>repo</th><th>round</th><th>profile</th>"
             "<th class='num'>critical</th><th class='num'>major</th><th class='num'>minor</th>"
             "<th>outcome</th><th class='num'>review</th><th class='num'>fixer</th><th>sorted</th>"
             "<th class='num'>turns</th><th class='num'>in</th><th class='num'>out</th></tr>"
         )
         for name in names:
             rnd = run["rounds"][name]
-            last = going and name == names[-1]
+            repo, run_name = name.split("/", 1)
+            last = going and name == [n for n in names if n.startswith(repo + "/")][-1]
             review = (
                 span(rnd["began"], rnd["found"])
                 if rnd["found"]
@@ -1075,7 +1191,8 @@ def render(run: dict, now: datetime) -> str:
             counts = rnd["counts"] or ("", "", "")
             done = rnd["sorted"]
             out.append(
-                f"<tr><td class='n'>{esc(name)}</td><td class='dim'>{esc(rnd['profile'])}</td>"
+                f"<tr><td>{esc(repo)}</td><td class='n'>{esc(run_name)}</td>"
+                f"<td class='dim'>{esc(rnd['profile'])}</td>"
                 + "".join(f"<td class='num'>{c}</td>" for c in counts)
                 + f"<td>{esc(rnd['outcome'] or ('' if rnd['found'] else 'running'))}</td>"
                 f"<td class='num'>{review}</td><td class='num'>{fixer}</td>"
@@ -1085,7 +1202,7 @@ def render(run: dict, now: datetime) -> str:
         if waiting:
             since = run["checks"][-1]["ended"] if run["checks"] else run["last"][0]
             out.append(
-                f"<tr><td class='n dim'>next</td><td></td><td></td><td></td><td></td><td>running</td>"
+                f"<tr><td></td><td class='n dim'>next</td><td></td><td></td><td></td><td></td><td>running</td>"
                 f"<td class='num'>{took(0, since)}</td><td></td><td></td><td></td><td></td><td></td></tr>"
             )
         out.append("</table>")
@@ -1093,13 +1210,13 @@ def render(run: dict, now: datetime) -> str:
     if run["finalize"]:
         out.append("<h2>Finalize</h2><table>")
         out += [
-            f"<tr><td class='at'>{at:%H:%M}</td><td>{esc(text)}</td></tr>"
-            for at, text in run["finalize"]
+            f"<tr><td class='at'>{at:%H:%M}</td><td>{esc(repo)}</td><td>{esc(text)}</td></tr>"
+            for at, repo, text in run["finalize"]
         ]
         closers = run["closers"]
         if closers:
             out.append(
-                f"<tr><td class='at'></td><td class='dim'>tokens in {count(sum(a['in'] for a in closers))}, "
+                f"<tr><td class='at'></td><td></td><td class='dim'>tokens in {count(sum(a['in'] for a in closers))}, "
                 f"out {count(sum(a['out'] for a in closers))}</td></tr>"
             )
         out.append("</table>")
@@ -1158,7 +1275,7 @@ def show(page: Path, slug: str) -> None:
         agterm("session", "rename", f"run: {slug}"[:40], "--target", shown)
     if not watcher(page):
         subprocess.Popen(
-            [sys.executable, __file__, slug, "--watch"],
+            [sys.executable, __file__, "--watch"],
             cwd=page.parent,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
@@ -1177,11 +1294,12 @@ def watcher(page: Path) -> int:
     return pid
 
 
-def draw(main_dir: Path, slug: str) -> str:
+def draw(jdir: Path) -> str:
     """draw writes the page and its data and returns the phase the run is in."""
     now = datetime.now()
-    page = main_dir / ".exec-plan" / slug / "status.html"
-    run = collect(main_dir, slug, now)
+    slug = jdir.name
+    page = jdir / "status.html"
+    run = collect(jdir, now)
     body = render(run, now)
     data = "window.draw(" + json.dumps(body).replace("</", "<\\/") + ");\n"
     # lanes of one wave write the journal at the same moment, and a reader must never see half a file
@@ -1195,9 +1313,9 @@ def draw(main_dir: Path, slug: str) -> str:
     return run["phase"]
 
 
-def watch(main_dir: Path, slug: str) -> None:
+def watch(jdir: Path) -> None:
     """watch redraws the page while the run goes on and its page is open."""
-    page = main_dir / ".exec-plan" / slug / "status.html"
+    page = jdir / "status.html"
     mark = page.with_name("status-watch")
     if watcher(page):
         return
@@ -1215,7 +1333,7 @@ def watch(main_dir: Path, slug: str) -> None:
             silent = 0
             if shown not in tree.stdout:
                 break
-            if draw(main_dir, slug) in ("closed", "stopped"):
+            if draw(jdir) in ("closed", "stopped"):
                 break
     except (OSError, SystemExit):
         pass
@@ -1227,22 +1345,23 @@ def watch(main_dir: Path, slug: str) -> None:
 def main() -> int:
     flags = {a for a in sys.argv[1:] if a.startswith("--")}
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    if len(args) != 1 or not flags <= {"--open", "--watch"} or len(flags) > 1:
-        print("usage: status.py <slug> [--open | --watch]", file=sys.stderr)
+    if args or not flags <= {"--open", "--watch"} or len(flags) > 1:
+        print(
+            "usage: EXEC_PLAN_JOURNAL=<journal> status.py [--open | --watch]",
+            file=sys.stderr,
+        )
         return 2
-    slug = args[0]
-    main_dir = main_checkout()
+    jdir = journal_dir()
     if "--watch" in flags:
-        watch(main_dir, slug)
+        watch(jdir)
         return 0
     if "--open" in flags and (lead := os.environ.get("CLAUDE_CODE_SESSION_ID")):
-        record = main_dir / ".exec-plan" / slug / "lead"
-        known = record.read_text().split() if record.is_file() else []
+        known = leads_of(jdir)
         if lead not in known:
-            record.write_text("\n".join([*known, lead]) + "\n")
-    draw(main_dir, slug)
+            (jdir / "lead").write_text("\n".join([*known, lead]) + "\n")
+    draw(jdir)
     if "--open" in flags:
-        show(main_dir / ".exec-plan" / slug / "status.html", slug)
+        show(jdir / "status.html", jdir.name)
     return 0
 
 

@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """Lists the shell commands of a plan run's subagents that break a rule of the run's prompts.
 
-usage: audit.py <slug>
+usage: EXEC_PLAN_JOURNAL=<journal> audit.py
 
+The journal is the run's directory, given as an absolute path; its name is the run's slug.
 Claude Code keeps the transcript of every subagent under its config directory, one JSONL file
-per agent, and each Bash call is a line of it. A transcript belongs to the run when it names a
-checkout of the run: .claude/worktrees/<slug>, or a lane, review or scratch worktree beside it.
-The session that leads the run is not read, only its subagents.
+per agent, and each Bash call is a line of it. The transcripts are looked for in the project
+directory of every session the journal's lead file records, and in that of the directory that
+holds the journal's .exec-plan. A transcript belongs to the run when it names the journal or a
+checkout of the run: .claude/worktrees/<slug>, or a lane, review or scratch worktree beside it,
+in any repository of the run. The session that leads the run is not read, only its subagents.
 
 A rule here is a pattern over one command, so a finding is a place to look and not a verdict:
 a search for the text of a forbidden command matches as the command itself would. A rule that
 no pattern over one command can state is not here. The rules about Go apply only to a checkout
-that tracks a go.mod, and a `make -C <dir>` counts as a Go build only when a go.mod lies under
-<dir>.
+of the run that tracks a go.mod, among the repositories the journal's repos file lists, and a
+`make -C <dir>` counts as a Go build only when a go.mod lies under <dir> in one of them.
 
 Prints one line per finding and a count. Exits 1 when the run has no transcript.
 """
@@ -28,14 +31,19 @@ GO = re.compile(r"\bgo (build|test|vet|run|generate)\b|\bgolangci-lint run\b")
 MAKE = re.compile(r"\bmake\b(?:\s+-C\s*(\S+))?")
 
 
-def go_dirs(main: Path) -> list[str]:
-    """go_dirs lists the directories of the checkout that hold a tracked go.mod, "" for the root."""
-    listed = subprocess.run(
-        ["git", "-C", str(main), "ls-files", "--", "go.mod", "**/go.mod"],
-        capture_output=True,
-        text=True,
-    ).stdout.split()
-    return ["" if p == "go.mod" else str(Path(p).parent) for p in listed]
+def go_dirs(checkouts: list[Path]) -> list[str]:
+    """go_dirs lists the directories of the checkouts that hold a tracked go.mod, "" for a root.
+
+    A command does not say which repository it ran in, so the directories of all of them count."""
+    found: list[str] = []
+    for checkout in checkouts:
+        listed = subprocess.run(
+            ["git", "-C", str(checkout), "ls-files", "--", "go.mod", "**/go.mod"],
+            capture_output=True,
+            text=True,
+        ).stdout.split()
+        found += ["" if p == "go.mod" else str(Path(p).parent) for p in listed]
+    return list(dict.fromkeys(found))
 
 
 def builds_go(c: str, mods: list[str]) -> bool:
@@ -105,21 +113,26 @@ RULES = [
 ]
 
 
-def main_checkout() -> Path:
-    common = subprocess.run(
-        ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
-        check=True,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
-    return Path(common).parent
+def checkouts(journal: Path) -> list[Path]:
+    """checkouts are the main checkouts the journal's repos file lists, one per repository: a run
+    worktree may be gone by the time the run is read back."""
+    try:
+        text = (journal / "repos").read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return [Path(parts[1]) for raw in text.splitlines() if len(parts := raw.split()) == 4]
 
 
-def transcripts(main: Path) -> list[Path]:
+def transcripts(journal: Path) -> list[Path]:
     config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
-    project = config / "projects" / re.sub(r"[^A-Za-z0-9]", "-", str(main))
+    projects = config / "projects"
+    record = journal / "lead"
+    leads = record.read_text().split() if record.is_file() else []
+    dirs = [p.parent for i in leads for p in projects.glob(f"*/{i}.jsonl")]
+    dirs.append(projects / re.sub(r"[^A-Za-z0-9]", "-", str(journal.parent.parent)))
     return sorted(
-        project.glob("*/subagents/agent-*.jsonl"), key=lambda p: p.stat().st_mtime
+        (p for d in dict.fromkeys(dirs) for p in d.glob("*/subagents/agent-*.jsonl")),
+        key=lambda p: p.stat().st_mtime,
     )
 
 
@@ -154,22 +167,29 @@ def label(path: Path) -> str:
 
 
 def main() -> int:
-    if len(sys.argv) != 2 or not re.fullmatch(
-        r"[A-Za-z0-9][A-Za-z0-9._-]*", sys.argv[1]
-    ):
-        print("usage: audit.py <slug>", file=sys.stderr)
+    given = os.environ.get("EXEC_PLAN_JOURNAL", "")
+    if not given:
+        print("audit.py: EXEC_PLAN_JOURNAL is not set", file=sys.stderr)
+        return 1
+    if not os.path.isabs(given):
+        print(f"audit.py: EXEC_PLAN_JOURNAL is not an absolute path: '{given}'", file=sys.stderr)
+        return 1
+    if len(sys.argv) != 1:
+        print("usage: EXEC_PLAN_JOURNAL=<journal> audit.py", file=sys.stderr)
         return 2
-    slug = sys.argv[1]
+    journal = Path(given)
+    slug = journal.name
     of_run = re.compile(
-        r"\.claude/worktrees/"
+        r"(?:"
+        + re.escape(str(journal))
+        + r"|\.claude/worktrees/"
         + re.escape(slug)
-        + r"(-(task|review)-\d+|-tip|-base)?(?![A-Za-z0-9._-])"
+        + r"(-(task|review)-\d+|-tip|-base)?)(?![A-Za-z0-9._-])"
     )
 
     agents = commands_read = findings = 0
-    main = main_checkout()
-    mods = go_dirs(main)
-    for path in transcripts(main):
+    mods = go_dirs(checkouts(journal))
+    for path in transcripts(journal):
         if not of_run.search(path.read_text(errors="replace")):
             continue
         agents += 1
@@ -183,7 +203,7 @@ def main() -> int:
                     print(f"{name}: {who}: {shown[:200]}")
     if agents == 0:
         print(
-            f"audit.py: no subagent transcript names a checkout of '{slug}'",
+            f"audit.py: no subagent transcript names {journal} or a checkout of '{slug}'",
             file=sys.stderr,
         )
         return 1

@@ -45,8 +45,8 @@ if [ "$staged" != "$named" ]; then
   exit 1
 fi
 
-# The pre-commit hooks build and lint. In a checkout of a plan run they use the run's caches; in
-# any other checkout cache.sh finds no run and the environment stays as it was.
+# The pre-commit hooks build and lint. Under EXEC_PLAN_JOURNAL they use the run's caches; without
+# it cache.sh sets nothing and the environment stays as it was.
 # shellcheck source=/dev/null
 . "$(dirname "$0")/cache.sh" 2>/dev/null || true
 

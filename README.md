@@ -38,3 +38,15 @@ ln -sf $P/prompts/profiles/plan.md $P/prompts/profiles/plan-recheck.md ~/.config
 A project tells the skills where its plans live, its gates, the records that bind a design and
 its review profiles in `.claude/planning/rules.md`, at the top of the checkout or in any directory
 above it; `~/.config/cc-things/planning/rules.md` serves every project without one. The sections and their defaults: `plugins/planning/references/rules.md`.
+
+### A plan across several repositories
+
+One plan may change several repositories. Each task changes one of them and names it with a
+`Repo:` line, a directory relative to where the session starts; a change in two repositories is
+two tasks joined by `After:`. Start the session that writes the plan and the one that runs it
+from the directory that holds every repository of the plan, so all of them are inside its
+working directory, and keep the rules file there. The run cuts a branch of the same name in each
+repository and reviews each one in its own revmux round. A plan kept outside git, such as in that
+common directory, is never committed: the run ticks it in place and moves it to `completed/`
+beside it. A light plan has one repository. The `Environment` section of the rules says how one
+repository builds against another's unpushed branch.

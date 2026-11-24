@@ -3,10 +3,10 @@
 A plan is a document with a lifecycle: written, reviewed, executed, closed. This file owns how
 one is written: the sections and what each carries, the form of a task, how an address is cited,
 what a plan never carries, and its language. It does not own what "task done" means. That is the
-gate, and the gate of each surface is where the `Gates` section of the project rules says it
-is, by default the `CLAUDE.md` governing the surface a task touches. Nor does it own the file's
-name and place: those are the `Plans` section's. The sections of the project rules, and the
-default of each, are [`../../../references/rules.md`](../../../references/rules.md).
+gate, and the gate of each surface is where the `Gates` section of the project rules says it is,
+by default the `CLAUDE.md` governing the surface a task touches. Nor does it own the file's name
+and its default directory: those are the `Plans` section's. The sections of the project rules,
+and the default of each, are [`../../../references/rules.md`](../../../references/rules.md).
 
 The `Plan form` section of the project rules adds to this form: a section of its own, a line a
 task carries, a check a decision passes, what a plan of that project may contain at all. Where
@@ -25,6 +25,24 @@ execution rested on a premise nobody had checked against the tree, or on a seman
 the plan had left for the executor to settle. Signatures and file lists were what plans got
 wrong most often, and the executor never needed them. So a plan is written at the level of
 decisions, invariants and contracts, and everything below that level is the executor's.
+
+## The plan's place
+
+A new plan goes where the owner says, else into the directory the `Plans` section names. That
+directory may be outside git: a workspace directory that holds several repositories side by
+side keeps the plans that span them. Where the file lies decides whether it is ever committed:
+
+- A tracked plan lies in a repository's work tree, in a place git does not ignore
+  (`git check-ignore -q <plan>` exits 1). `/planning:make-plan` commits it, and the run closes it
+  with a commit in that repository. That repository is the plan's home repository.
+- An untracked plan lies outside every work tree, or in a directory its repository ignores.
+  Nothing commits it. The run ticks it in place and closes it with a plain move into the
+  closed-plans directory beside it, `completed/` in the plan's own directory unless the `Plans`
+  section names another. An untracked plan has no home repository.
+
+A plan may change several repositories. The session that writes it and the session that runs
+it start from the directory that holds all of them, and a task names its repository relative
+to that directory, in its `Repo:` line.
 
 ## Sections
 
@@ -145,7 +163,9 @@ joins the plan with its price. Out of Scope holds what the owner chose to leave.
   still builds, so a contract goes after its Go consumers or with them, inside one task, not in
   the usual barrier task that lands it first.
 - **Shared files.** A table of every file two tasks of the plan edit: the file, the two tasks
-  by title, and which one is second. The run merges the second task's lane after the first,
+  by title, and which one is second. In a plan with more than one repository the file is
+  named with its repository, `billing-api: internal/export/`. Two tasks of different
+  repositories never share a file. The run merges the second task's lane after the first,
   and the integrator reads this table before it merges anything. Generated output is not
   listed, nor what the `Plan form` section names as regenerated: the integrator regenerates
   them. Two
@@ -166,7 +186,8 @@ joins the plan with its price. Out of Scope holds what the owner chose to leave.
   - it is one finished result in one domain;
   - no choice is open: every behaviour the work sets is a decision of the plan or settled by
     the tree;
-  - one executor can close the tasks one after another in one checkout;
+  - one executor can close the tasks one after another in one checkout, so every task is in
+    one repository;
   - a contract or a stored shape it changes has every reader and writer named in Contracts
     and Data, and the tasks name the gates that prove the result on those paths.
 
@@ -223,7 +244,13 @@ After: «the docs describe the system without the bulk export» (the code follow
   inventory runs over, the docs included when the `rg` covers them: a hit there is the task's
   to remove. An area missing from `Where:` is one
   the Shared files table cannot see, and it is where most edits outside `Where:` in past runs
-  landed.
+  landed. Every path in `Where:` is relative to the task's repository.
+- **`Repo:`** The repository the task changes, on the line right after `Where:`, written like
+  it: ``Repo: `billing-api`.`` The name is the repository's directory relative to the directory
+  the session starts in. A task without the line belongs to the home repository. In an
+  untracked plan, which has no home repository, every task carries the line. A task changes
+  one repository: a change across two repositories is two tasks, and the one that builds on
+  the other names it in `After:`.
 - **`After:`** The tasks this one waits for, each by its title in guillemets with the reason in
   parentheses: a file both edit, a result this task builds on, a contract its code consumes.
   Absent when the task waits for nothing. The run starts a task when every task its `After:`
@@ -292,7 +319,8 @@ premise: quote the line, not its position.
 - The executor and the model. The plan says what; the tool that runs it and the model it runs
   on are chosen at run time.
 - The branch, the worktree and the shape of the pull request. Where a run happens is the run's
-  first question, and a worktree run's branch is the plan's slug.
+  first question, and the run names its branch from the plan's slug as the `Trunk` section of
+  the project rules says.
 - A "verify acceptance criteria" task and a "move the plan to completed" task. Acceptance lives
   in each task, and closing the plan is the run's finalize.
 - A reference to another task by number ("as in Task 3", "after Task 5"). Tasks are renumbered

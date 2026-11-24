@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Run the search commands of a plan's `acceptance:` items and show what each one hits.
 
-Usage: acceptance.py <plan.md> [<checkout>]   (checkout defaults to the git top level of the cwd)
+Usage: acceptance.py <plan.md> [<base>]   (base defaults to the cwd)
 
 For every `### Task N:` section, every backtick span inside an `acceptance` item whose
-command is a read-only search is run from the checkout root. The output is grouped by file,
-and a file outside every path the task's `Where:` line names is marked `outside Where:`.
+command is a read-only search is run from the root of the task's repository. A task's
+`Repo:` line names that repository as a directory relative to <base>, the directory the
+session started in, which holds every repository of the plan. A task with no `Repo:` runs
+in the plan's home repository, the work tree the plan lies in when git does not ignore it;
+in a plan with no home repository such a task is skipped and says so. The output is grouped
+by file, and a file outside every path the task's `Where:` line names, relative to the
+task's repository, is marked `outside Where:`.
 That mark is where an inventory term matches something the task does not own: a kept name,
 another task's file, a foreign meaning. Gates (`make`, `go`, `npm`) are not run.
 
@@ -83,13 +88,18 @@ def runnable(cmd: str) -> str | None:
 
 
 def tasks(text: str):
-    """Yield (title, where_paths, acceptance_items) per task section."""
+    """Yield (title, where_paths, repo_or_None, acceptance_items) per task section."""
     parts = re.split(r"(?m)^### (Task \d+:.*)$", text)
     for i in range(1, len(parts), 2):
         title, body = parts[i].strip(), parts[i + 1]
         body = re.split(r"(?m)^## ", body)[0]
+        repo = None
+        m = re.search(r"(?m)^Repo:[ \t]*(.*)$", body)
+        if m:
+            span = re.search(r"`([^`]+)`", m.group(1))
+            repo = (span.group(1) if span else m.group(1)).strip().rstrip(".") or None
         where = []
-        m = re.search(r"(?m)^Where:(.*(?:\n(?!\n).*)*)", body)
+        m = re.search(r"(?m)^Where:(.*(?:\n(?!\n)(?![A-Z][A-Za-z]*:).*)*)", body)
         if m:
             where = [
                 w.rstrip("/")
@@ -106,7 +116,23 @@ def tasks(text: str):
                 items[-1] += " " + line.strip()
             else:
                 cur = None
-        yield title, where, items
+        yield title, where, repo, items
+
+
+def home_repo(plan: Path) -> Path | None:
+    """The work tree the plan lies in when git does not ignore it, else None."""
+    top = subprocess.run(
+        ["git", "-C", str(plan.parent), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+    )
+    if top.returncode != 0:
+        return None
+    ignored = subprocess.run(
+        ["git", "-C", str(plan.parent), "check-ignore", "-q", str(plan)],
+        capture_output=True,
+    )
+    return None if ignored.returncode == 0 else Path(top.stdout.strip())
 
 
 def inside(path: str, where: list[str]) -> bool:
@@ -118,20 +144,24 @@ def main() -> None:
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     plan = Path(sys.argv[1]).resolve()
-    root = (
-        Path(sys.argv[2]).resolve()
-        if len(sys.argv) > 2
-        else Path(
-            subprocess.run(
-                ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True
-            ).stdout.strip()
-        )
-    )
-    for title, where, items in tasks(plan.read_text()):
+    base = Path(sys.argv[2] if len(sys.argv) > 2 else ".").resolve()
+    home = home_repo(plan)
+    for title, where, repo, items in tasks(plan.read_text()):
         if not items:
             continue
         print(f"\n## {title}")
         print(f"   Where: {', '.join(where) or '—'}")
+        if repo:
+            root = base / repo
+            if not root.is_dir():
+                print(f"   skipped: Repo: {repo} is not a directory under {base}")
+                continue
+        elif home:
+            root = home
+        else:
+            print("   skipped: no Repo: line, and the plan has no home repository")
+            continue
+        print(f"   Repo: {root}")
         for item in items:
             for cmd in re.findall(r"`([^`]+)`", item):
                 if not re.match(r"^(rg|grep|awk|git|ls|test|find)\b", cmd):

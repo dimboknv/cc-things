@@ -33,8 +33,14 @@ heading not listed here is read as an addition to every skill's rules.
 
 ### `## Plans`
 
-Where plans live and where a closed one goes. Default: `docs/plans/`, closed plans under
-`docs/plans/completed/`, a plan named `yyyymmdd-<slug>.md`.
+Where a new plan goes by default, and where a closed one goes. The directory may be outside
+git: a workspace directory that holds several repositories side by side keeps the plans that
+span them, and its plans are never committed. A path the owner gives for one plan wins over
+this section. Where the file lies decides whether it is committed: "The plan's place" in
+`skills/make-plan/references/form.md`. Default: `docs/plans/` at the top of the checkout,
+closed plans under `docs/plans/completed/`, a plan named `yyyymmdd-<slug>.md`; outside git,
+`docs/plans/` in the directory the session starts in, and an untracked plan's closed plans
+under `completed/` beside it.
 
 ### `## Trunk`
 
@@ -57,7 +63,11 @@ build, the lint and the tests the project's own build file defines.
 What a checkout needs before it builds: dependencies a fresh worktree installs per surface,
 caches to set, services or stands used one at a time, how a run sees one up and takes it down,
 a command that must never run because it takes down every stand, and the suites that act on a
-stand with how to prove they build without running them. Default: nothing.
+stand with how to prove they build without running them. It also says how one repository builds
+against another repository's run branch that is not pushed yet: a `go.work` or a `replace` to
+the other repository's run worktree, a path dependency, and what comes out of the branch before
+its pull request. Default: nothing; a repository builds only against the published versions of
+the others.
 
 ### `## Records`
 

@@ -35,12 +35,13 @@ It prints the project's rules file, its path on the first line as `<!-- rules: <
 nothing. The sections, and the default each takes when the file is absent or leaves it out, are
 [`../../references/rules.md`](../../references/rules.md). This skill reads:
 
-- `Plans`: the plans directory, the file name, where a closed plan goes;
+- `Plans`: the default directory of a new plan, the file name, where a closed plan goes;
 - `Gates`: where the gate of each surface is written, which Execution links;
 - `Environment`: what a checkout needs, which Execution does not repeat;
 - `Records`: the records that bind a design, the records that only explain one, and the
   judgements only the owner makes;
-- `Consumers`: where to search for the readers and writers of a shape;
+- `Consumers`: where to search for the readers and writers of a shape, the other repositories
+  included;
 - `Plan form`: what a plan of this project carries beyond `references/form.md`, and what
   discovery checks beyond Step 2;
 - `Review`: the profiles and lenses of the plan rounds.
@@ -83,7 +84,9 @@ tree, and it checks what the reviews check later, the lens in
   plan changes, found with `rg` over the places the `Consumers` section names, tests included:
   the tests and specs that pin the old behaviour, the test suites of a binary, the end-to-end
   suites, the seeds and fixtures, the build and deploy scripts, and the code written by hand
-  beside a generated client. Their areas go into `Where:`;
+  beside a generated client. Their areas go into `Where:`. When the `Consumers` section names
+  other repositories, the search runs in each of them too, and a reader or writer found in
+  another repository is a task of that repository, with its `Repo:` line;
 - outside systems: a claim about how a system the repository does not own behaves (an engine,
   a library, a vendor's device or protocol, a browser API) is a premise like any other. Its
   anchor is the vendor's document or the source of the version the tree pins, in the
@@ -166,36 +169,43 @@ choosing. Something the skill adds on its own, a monitor, a lock, a name, is its
 
 ## Step 4: write
 
-Write the plan into the plans directory under the file name the `Plans` section gives, in the
-form of [`references/form.md`](references/form.md) with what the `Plan form` section adds, in
-the language of the request. Before the menu, hold it to the lens yourself, once: every anchor
-runs, every decision is an assertion with a reason, the alternative it rejects and an
-acceptance that can fail, no detail the executor settles from the tree is written as a
-decision, no choice is left to the executor, every rename or removal names in `Where:` each
-surface its inventory runs over, Skills in Execution name skills the project and the installed
-plugins hold today, every `After:` names a task that exists by its title and gives a reason,
-every file two tasks edit is in the Shared files table or behind an `After:`, and no two tasks
-that can run together carry the same `Needs:`.
-Every `acceptance:` command is run on the tree as it stands, and it must fail there, because
-the work is not done yet: a check that something is gone still finds it today, and a check
-that something is there does not find it today. One that already passes today proves nothing
-and is rewritten until it fails. What that pass finds is edited in now, not left for a review
-to find.
+Write the plan where the owner said, else into the directory the `Plans` section gives, under
+the file name that section gives, in the form of [`references/form.md`](references/form.md) with
+what the `Plan form` section adds, in the language of the request. Its place decides whether it
+is tracked or untracked, as "The plan's place" in the form says: `git check-ignore -q <plan>`,
+run from the plan's directory, exits 1 for a tracked plan, and 0 (ignored) or 128 (no work
+tree) for an untracked one. Every task that changes a repository other than the home one
+carries `Repo:`, and in an untracked plan every task does.
+
+Before the menu, hold it to the lens yourself, once: every anchor runs, every decision is an
+assertion with a reason, the alternative it rejects and an acceptance that can fail, no detail
+the executor settles from the tree is written as a decision, no choice is left to the executor,
+every rename or removal names in `Where:` each surface its inventory runs over, Skills in
+Execution name skills the project and the installed plugins hold today, every `After:` names a
+task that exists by its title and gives a reason, every file two tasks edit is in the Shared
+files table or behind an `After:`, no two tasks that can run together carry the same `Needs:`,
+and every task changes one repository, the one its `Repo:` names or the home one. Every
+`acceptance:` command is run on the tree as it stands, and it must fail there, because the work
+is not done yet: a check that something is gone still finds it today, and a check that something
+is there does not find it today. One that already passes today proves nothing and is rewritten
+until it fails. What that pass finds is edited in now, not left for a review to find.
 
 The search commands run through
-[`scripts/acceptance.py`](scripts/acceptance.py), from the root of the checkout:
+[`scripts/acceptance.py`](scripts/acceptance.py), from the directory the session started in,
+the one `Repo:` lines are relative to:
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/make-plan/scripts/acceptance.py <plan>
 ```
 
-It runs every `rg`, `grep`, `awk` or `git grep` inside an `acceptance:` item, groups the hits
-by file and marks a file outside the task's `Where:` as `outside Where:`. Gates (`make`, `go`,
-`npm`) it skips; run those by hand. Every marked file is read: it is the task's own and
-`Where:` gains its area, or the term matches a name the task keeps, another task's file or a
-foreign meaning, and the term is narrowed or the foreign meaning is named in the acceptance.
-An inventory term that matched what the task keeps was the most frequent major finding of the
-plan rounds.
+It runs every `rg`, `grep`, `awk` or `git grep` inside an `acceptance:` item from the root of
+the task's repository, groups the hits by file and marks a file outside the task's `Where:` as
+`outside Where:`. A task it skips for want of a repository lacks its `Repo:` line. Gates
+(`make`, `go`, `npm`) it skips; run those by hand. Every marked file is read: it is the task's
+own and `Where:` gains its area, or the term matches a name the task keeps, another task's file
+or a foreign meaning, and the term is narrowed or the foreign meaning is named in the
+acceptance. An inventory term that matched what the task keeps was the most frequent major
+finding of the plan rounds.
 
 Choose the mode before the menu, by the conditions of the Mode item of Execution in
 [`references/form.md`](references/form.md). When every one holds, write the Mode line with its
@@ -205,7 +215,7 @@ where nothing real fills a section, never padded with a decision nobody had to m
 
 ## Step 5: the menu
 
-One question, five items, the recommended item first and marked:
+One question, five items for a tracked plan, the recommended item first and marked:
 
 1. revmux `plan`, the two-model round;
 2. agent `plan-review`, the one-model pass;
@@ -213,10 +223,13 @@ One question, five items, the recommended item first and marked:
 4. commit;
 5. done.
 
+An untracked plan is never committed, so its menu has four items: commit is not offered.
+
 For a plan no review has read, the round is the recommendation; for a light plan it is the
 agent, listed first, and the round stays on the menu for the owner to pick. After a review
 (items 1 to 3) the menu comes back with the verdict from "Review findings" below and the item it
-recommends next: a `plan-recheck` round after edits, or commit on `ready`.
+recommends next: a `plan-recheck` round after edits, or on `ready` commit for a tracked plan and
+done for an untracked one.
 
 ### The lens and the profiles
 
@@ -238,10 +251,11 @@ path, and the rules file the loader printed. The lens takes both from `scope.md`
 Load the `revmux:revmux` skill and follow it, with what a plan changes:
 
 - The subject is a proposal, not a diff. `scope.md` names the plan file, says to read it in
-  full, and lists the areas its `Where:` lines name as the tree to read it against. It names
-  the form by its absolute path as "the form", and the rules file by its absolute path as "the
-  project rules", or says "project rules: none". `goal.md` is the plan's Goal in two lines; the
-  criteria are the lens's and are not restated.
+  full, and lists the areas its `Where:` lines name as the tree to read it against. It names the
+  form by its absolute path as "the form", and the rules file by its absolute path as "the
+  project rules", or says "project rules: none". In a plan with more than one repository it
+  lists the areas by repository, each repository by its path. `goal.md` is the plan's Goal in
+  two lines; the criteria are the lens's and are not restated.
 - The task id is `plan-<slug>`, the slug being the file name without its date and extension,
   as `.revmux/tasks/` names a plan's rounds. The branch's rounds under `/planning:exec-plan`
   run under the bare slug, and the two are never joined. Rounds are `01-initial`,
@@ -258,10 +272,13 @@ Load the `revmux:revmux` skill and follow it, with what a plan changes:
   project these skills were written in, the later ones raised more majors than the first (307
   against 244). At most two rechecks: a critical or major still standing after the second goes
   to the owner as a fork in the form of Step 3, not to a third recheck.
-- Run `revmux` from the main checkout, the first entry of `git worktree list`: the project
-  layer with the profile and the lens is read from the process working directory, and the
-  run archive lands in the repository's `.revmux/tasks/`, which git should ignore. A plan that
-  sits in a worktree gets `--workdir <worktree>`. Headless, unless the owner asks to watch.
+- Where the round runs. The project layer with the profile and the lens is read from the
+  process working directory, and the run archive lands in its `.revmux/tasks/`, which git
+  should ignore. A tracked plan's round runs from the main checkout of its home repository, the
+  first entry of `git worktree list`, with `--workdir` the checkout the plan sits in, that main
+  checkout or a worktree. An untracked plan's round runs from the directory that holds the
+  repositories, the one the session started in, with `--workdir` that same directory. Headless,
+  unless the owner asks to watch.
 - Read `sources.degraded` before the findings. A round with a degraded source is partial: say
   so and offer to rerun the missing source. Its silence is not a verdict.
 
@@ -277,9 +294,11 @@ variables, so its prompt carries four absolute paths:
 - the form, `${CLAUDE_PLUGIN_ROOT}/skills/make-plan/references/form.md`;
 - the rules file the loader printed, or "none".
 
-It reads the lens, the form and the rules, applies them once on one model, and returns
-findings by section, each `fact:`, `fork:` or `question:` with a severity, and a verdict of
-its own. Its findings are handled like a round's; the verdict this skill gives is its own.
+It runs in the session's working directory, so a task's `Repo:` names the same directory for it
+as for this skill. It reads the lens, the form and the rules, applies them once on one model,
+and returns findings by section, each `fact:`, `fork:` or `question:` with a severity, and a
+verdict of its own. Its findings are handled like a round's; the verdict this skill gives is its
+own.
 
 ### 3. webrev
 
@@ -293,9 +312,9 @@ empty or cancelled. Outside agterm the page cannot open: say so and return to th
 
 ### 4. commit
 
-Into the current branch, whatever it is; never create or switch one. The commit goes through
-the script `/planning:exec-plan` commits with, run from the root of the checkout the plan sits
-in:
+Offered for a tracked plan only. Into the current branch, whatever it is; never create or
+switch one. The commit goes through the script `/planning:exec-plan` commits with, run from the
+root of the checkout the plan sits in:
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts/commit.sh "<message>" <plan>
@@ -313,7 +332,8 @@ print `/planning:exec-plan <plan>` and stop.
 
 ### 5. done
 
-Stop. Say in one line that the plan is in the working tree and not committed.
+Stop. For a tracked plan, say in one line that the plan is in the working tree and not
+committed. For an untracked plan, say where it lies and print `/planning:exec-plan <plan>`.
 
 ## Review findings
 
@@ -338,15 +358,16 @@ carries no verdict, and the agent's is one more input.
 
 ## Refresh: `/planning:make-plan <existing plan>`
 
-The argument is a plan in the plans directory, not among the closed ones. The plan is brought
-to the tree as it stands and reads afterwards as if written today: no "was", no "now", no note
-of what moved. It keeps its language, and a closed task keeps its ticks. Not the usual removal
-of a done task.
+The argument is a plan that is not among the closed ones. The plan is brought to the tree as it
+stands and reads afterwards as if written today: no "was", no "now", no note of what moved. It
+keeps its language, and a closed task keeps its ticks. Not the usual removal of a done task.
 
-1. Since when. The last commit that touched the plan is the mark,
-   `git log -1 --format=%H -- <plan>`. Then `git log <mark>..HEAD -- <area>` for every area
-   every `Where:` names. What moved there is what the refresh reads; the rest of the tree is
-   not reread.
+1. Since when. The mark is a time. For a tracked plan it is the date of the last commit that
+   touched it, `git log -1 --format=%cI -- <plan>` in the home repository; for an untracked
+   plan, or a tracked one no commit has touched yet, it is the file's modification time. Then,
+   in each task's repository, `git -C <repository> log --since=<mark> -- <area>` for every area
+   its `Where:` names. What moved there is what the refresh reads; the rest of the tree is not
+   reread.
 2. Every premise, by its anchor. Run each. In place: nothing. The fact holds but the quote is
    gone: the anchor is rewritten to what `rg` finds today. The fact is false: a fork for the
    owner in the form of Step 3, and the decisions and tasks that rest on it wait for the
@@ -389,6 +410,8 @@ Everything is edited in place. Then the menu of Step 5, as for a new plan.
 | A refresh that says what changed | Edit in place; the plan reads as written today |
 | Committed with its own `git add` and `git commit` | `commit.sh`; a refusal names another session's paths and is a stop |
 | Made a branch for the plan | The current branch, whatever it is |
+| Offered commit for a plan outside git or in an ignored directory | An untracked plan's menu has no commit; the run closes it with a move |
+| A task of another repository without `Repo:`, or one task across two repositories | `Repo:` on the line after `Where:`; two repositories are two tasks joined by `After:` |
 | Two tasks share a file and neither waits for the other | The Shared files table with who is second, or an `After:` |
 | An `After:` by number | By title, with the reason |
 | Ran the acceptance commands and read only the exit code | `scripts/acceptance.py`; every file `outside Where:` is read |

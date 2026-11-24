@@ -31,8 +31,11 @@ of its own to fall back on.
 
 ## 1. Load the lens
 
-Find the repository root with `git rev-parse --show-toplevel`, run from the plan's directory.
-Confirm that the plan lies inside it; stop otherwise.
+A plan may change several repositories, and it may lie outside git. A task's tree is the
+directory its `Repo:` line names, relative to your working directory; a task without the line
+belongs to the repository the plan lies in, its root found with `git rev-parse --show-toplevel`
+run from the plan's directory. Run each task's commands in its tree. A plan outside git has no
+such repository: every task of it names one, and the lens says what a missing one is.
 
 Do not carry a checklist here. The lens owns it, and this review changes with the lens:
 

@@ -19,6 +19,10 @@ the executor to make.
   out, or a file that is "none", adds nothing: no record binds, and the search runs over the
   whole checkout. A heading the file carries beyond those is an addition to this lens.
 
+A task's tree is its repository: the directory its `Repo:` line names, relative to the working
+directory, or, for a task without the line, the repository the plan lies in. Run a task's
+anchors, inventory and searches there.
+
 Check each of these and report where one fails:
 
 - Premises against the tree. Each premise carries an anchor, a file with a quoted string or a
@@ -73,14 +77,24 @@ Check each of these and report where one fails:
   A task that cannot end green is two tasks or a wrong `After:`. Every decision and every
   invariant is proven by an acceptance in some task, a check that can fail. A decision nothing
   proves, and an acceptance that cannot fail, are findings.
+- Repositories, as "The plan's place" and the `Repo:` item of the form state them. A task with
+  no `Repo:` line in an untracked plan, one outside every work tree or in a directory its
+  repository ignores, is `major`: an open fork, since nothing in the tree says which repository
+  the task changes. A task whose `Where:` or checkboxes reach into a second repository is
+  `major`: its lane works in one repository's worktree, and a change across two repositories is
+  two tasks joined by `After:`. Two tasks of different repositories never share a file, so a
+  Shared files row that names two such tasks is a contradiction between the table and what the
+  tasks edit. A `Repo:` that names no directory under the working directory is a fact the tree
+  refutes.
 - The light mode. A plan whose Execution carries a Mode line is held to the conditions the form
   gives under Mode. For such a plan, a reader or writer of a changed shape the plan does not
-  name, an open choice, or a task that needs a second executor is `major`, because the run
-  takes the light path on that basis. A section filled with a decision nobody had to make is a
+  name, an open choice, a task that needs a second executor, or tasks in more than one
+  repository are `major`, because the run takes the light path on that basis and its one
+  executor works in one checkout. A section filled with a decision nobody had to make is a
   finding too.
 - The form, as the form and the `Plan form` section state it: the sections and their order, the
-  task header, `Result:`, `Decision:`, `Where:`, the addresses, what a plan does not carry, the
-  language.
+  task header, `Result:`, `Decision:`, `Where:`, `Repo:`, the addresses, what a plan does not
+  carry, the language.
 
 Do not demand:
 

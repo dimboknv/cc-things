@@ -6,11 +6,14 @@ rules file the skills read at their start.
 
 ## Where it is
 
-Two places, read in this order. The first file that exists and is not empty is used whole; the
-two are never merged.
+Read in this order; the first file that exists and is not empty is used whole, and no two
+are ever merged:
 
-1. `.claude/planning/rules.md` at the root of the checkout, the project's file.
-2. `~/.config/cc-things/planning/rules.md`, the user's file for every project without its own.
+1. `.claude/planning/rules.md` in the top of the checkout, then in each directory above it, up
+   to and not including `$HOME`. A workspace that holds many repositories side by side keeps one
+   file in its own directory for all of them, and a worktree under the checkout finds the
+   checkout's file.
+2. `~/.config/cc-things/planning/rules.md`, the user's file for every project without one.
 
 `scripts/rules.sh` prints the file that wins, or nothing. A skill runs it once:
 

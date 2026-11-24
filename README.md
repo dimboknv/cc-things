@@ -36,5 +36,5 @@ ln -sf $P/prompts/profiles/plan.md $P/prompts/profiles/plan-recheck.md ~/.config
 ### Project rules
 
 A project tells the skills where its plans live, its gates, the records that bind a design and
-its review profiles in `.claude/planning/rules.md`; `~/.config/cc-things/planning/rules.md` serves every
-project without one. The sections and their defaults: `plugins/planning/references/rules.md`.
+its review profiles in `.claude/planning/rules.md`, at the top of the checkout or in any directory
+above it; `~/.config/cc-things/planning/rules.md` serves every project without one. The sections and their defaults: `plugins/planning/references/rules.md`.

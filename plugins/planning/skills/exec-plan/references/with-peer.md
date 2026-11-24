@@ -27,19 +27,21 @@ skills of the project do not bind a Codex.
 
 ## State
 
-Beside what a plain run keeps, in the journal `.exec-plan/<slug>/review/` of the main
-checkout, which the lead creates after `base.sh` and never before the go:
+Beside what a plain run keeps, in `review/` of the run's journal, which the lead creates after
+the `base.sh` of every repository and never before the go:
 
 - `notes.md`, the notes every lane gets. The lead writes it once, after the go; the peer
   rewrites it after every wave, starting from the file as it stands. Forty lines at most. A
   run with no `notes.md` gives its lanes an empty `NOTES`.
 - `wave-<N>.json`, the peer's findings on wave `N`, in the shape the fixer reads:
-  `{"findings": [{"file", "line", "severity", "title", "body", "fix", "sources": ["peer"],
-  "verdict": "unverified"}]}`. `severity` is `critical` or `major`; the peer reports nothing
+  `{"findings": [{"repo", "file", "line", "severity", "title", "body", "fix", "sources":
+  ["peer"], "verdict": "unverified"}]}`. `repo` is the repository the finding sits in, and
+  `file` is relative to it. `severity` is `critical` or `major`; the peer reports nothing
   below.
 
 A review lane is the branch `<slug>-review-<N>` and the worktree
-`.claude/worktrees/<slug>-review-<N>` in the main checkout.
+`.claude/worktrees/<slug>-review-<N>` in the main checkout of one repository. Findings of one
+wave in two repositories get two review lanes, one in each.
 
 ## Start: the council before the go
 
@@ -74,8 +76,9 @@ asks for the go:
    when the owner answers. An answer that changes the plan sends it back through
    `/planning:make-plan <plan>`, as a false premise does. The rest stays in the scratchpad until the go.
 
-The go covers the peer and every exchange with it. After `base.sh`, write `notes.md`: the
-notes kept in the scratchpad, and every answer the owner gave with the go.
+The go covers the peer and every exchange with it. After the `base.sh` of every repository,
+write `notes.md`: the notes kept in the scratchpad, and every answer the owner gave with the
+go.
 
 ## The exchanges
 
@@ -84,8 +87,8 @@ The first line of a message is its tag. The last line says what reply is expecte
 
 | Tag | The lead sends | The peer returns |
 |---|---|---|
-| `plan` | The path of the plan, the commit it is read at, the wave schedule. Nothing the lead concluded | Where an executor will stumble: a place that reads two ways, a task that cannot end green, a wave cut that puts two tasks on one file, a question only the owner can answer |
-| `wave N` | The path of the plan, the run's checkout, the range `<tip before the wave>..<tip after it>`, the titles of the wave's tasks, the journal path, the path `wave-<N>.json` is to be written at | One line: how many findings it wrote, that `notes.md` is rewritten, and `stop: <reason>` when a finding breaks what the later waves stand on |
+| `plan` | The path of the plan, the run's journal, every repository of the plan with its main checkout and the commit it is read at, the wave schedule. Nothing the lead concluded | Where an executor will stumble: a place that reads two ways, a task that cannot end green, a wave cut that puts two tasks on one file, a change one repository needs that no task makes, a question only the owner can answer |
+| `wave N` | The path of the plan, for each repository the wave touched its run worktree and the range `<tip before the wave>..<tip after it>`, the titles of the wave's tasks, the journal path, the path `wave-<N>.json` is to be written at | One line: how many findings it wrote, that `notes.md` is rewritten, and `stop: <reason>` when a finding breaks what the later waves stand on |
 | `end` | That the run is over | Nothing |
 
 ## The wave loop
@@ -105,19 +108,22 @@ The Go build cache, which Step 3 removes here, is removed only when no fixer is 
 fixer builds from it while the next wave is cut, and the cache then waits for the next wave.
 
 **When the peer's reply arrives.** `wave-<N>.json` with no finding: log
-`review wave N: no findings`. Otherwise cut a review lane from the run branch's `HEAD` as it
-stands now, give it what Step 3 gives a task lane whose `Where:` names the areas the findings
-sit in, the installs of the `Environment` section and the linked ignored files, and launch
-one subagent in the background (the Agent tool, `general-purpose`) with the prompt of
-[`fixer.md`](fixer.md): `CHECKOUT`, `BRANCH` and `PLAN` are the review lane's, `BASE` the run's base, `ROUND` is `wave N, peer`, `FINDINGS` the path
-of `wave-<N>.json`. A reply that carries `stop:` is logged as
+`review wave N: no findings`. Otherwise, for each repository its findings name, cut a review
+lane in that repository from its run branch's `HEAD` as it stands now, give it what Step 3
+gives a task lane whose `Where:` names the areas the findings sit in, the installs of the
+`Environment` section and the linked ignored files, and launch one subagent in the background
+(the Agent tool, `general-purpose`) with the prompt of [`fixer.md`](fixer.md): `CHECKOUT` and
+`BRANCH` are the review lane's, `REPO` its repository, `PLAN` the plan and `JOURNAL` the
+journal, `BASE` that repository's base, `ROUND` is `wave N, peer`, `FINDINGS` the path
+of `wave-<N>.json`. The fixer sorts only the findings of its repository. A reply that carries `stop:` is logged as
 `[owner] review wave N: the peer asks to stop, not verified: <the peer's words>`: this
 session reads no code, so the claim reaches the owner as the peer's. A reply that arrives
 after a stop report starts nothing: the continuation takes it.
 
 **The integrator.** `REVIEW` of [`integrate.md`](integrate.md) names
 every review lane whose fixer has ended with a commit and that the journal does not yet list
-as `review wave N: merged`, oldest first. A fixer still running is not waited for: its lane
+as `review wave N: merged`, oldest first, each with its repository, and `REPOS` names the
+repository of each. A fixer still running is not waited for: its lane
 goes into the next integration. A review lane the fixer left without a commit is removed
 with its branch. A merged review lane is removed the way an integrated task lane is.
 
@@ -134,8 +140,8 @@ ended:
   it comes, is named under `open:` of the run report, and no fixer starts for it;
 - a fixer still runs: wait for it. It is the lead's own subagent, and its end is announced;
 - review lanes with a commit are left: one more integrator, `LANES` set to `none`, `REVIEW`
-  naming them, `WAVE` set to `<last wave> review` and `TIP` to the run branch's `HEAD` after
-  the check. Its `wave <last wave> review: integrated` line sends nothing to the peer.
+  naming them, `WAVE` set to `<last wave> review`, and `REPOS` naming the repository of each
+  with its tip the run branch's `HEAD` after the check. Its `wave <last wave> review: integrated` line sends nothing to the peer.
 
 Then Step 5 and Step 6, as written. The first round runs on the first-round profile whatever
 the peer found: it is the measure of the trial.
@@ -151,7 +157,7 @@ names, or Claude Code. Start it; no `plan` message is sent.
 - A `wave-<N>.json` with findings and no `review wave N, peer:` line of a fixer in the
   journal gets its fixer.
 - A wave whose fixer logged `[owner] review wave N, peer` gets the fixer again, on the same
-  file and in the same lane, now that the plan copy holds the owner's answer.
+  file and in the same lane, now that the plan holds the owner's answer.
 - A wave integrated with no findings file was not reviewed, and the run report says so.
 
 ## The end
@@ -174,7 +180,7 @@ two or three majors to the first round.
 
 | Mistake | Fix |
 |---|---|
-| Wrote `notes.md` or made the `review/` directory before the go | After `base.sh`; until then the notes sit in the scratchpad |
+| Wrote `notes.md` or made the `review/` directory before the go | After the `base.sh` of every repository; until then the notes sit in the scratchpad |
 | Waited for the peer before cutting the next wave | Send `wave N`, then the next pass at once |
 | Held the integrator for a fixer that still ran | Its lane goes into the next integration; only after the last wave is a fixer waited for |
 | Sent the peer the lead's own reading with `plan` | The plan, its commit and the schedule only |

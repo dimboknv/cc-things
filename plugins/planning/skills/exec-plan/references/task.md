@@ -6,11 +6,13 @@ runs in a fresh context and sees nothing of this session or of the other lanes.
 
 | Placeholder | Value |
 |---|---|
-| `CHECKOUT` | absolute path of this lane's worktree |
+| `CHECKOUT` | absolute path of this lane's worktree, in its task's repository; in a light run, the run worktree |
 | `BRANCH` | this lane's branch |
-| `WAVE` | every task of this wave as `N: <title>`, one per line, this one included; in a light run, the line `light run` |
-| `PLAN` | absolute path of the plan inside `CHECKOUT` |
-| `SLUG` | the plan's slug, the journal's directory name |
+| `REPO` | the directory name of the task's repository |
+| `WAVE` | every task of this wave as `N: <title> (<repo>)`, one per line, this one included; in a light run, the line `light run` |
+| `PLAN` | absolute path of the plan the run reads, the one the journal's `plan` names; the lane reads it and never edits it |
+| `PROGRESS` | absolute path of this lane's progress file, `<journal>/lanes/task-<N>.md`, the copy of its task's section the lane ticks; in a light run, the same path as `PLAN` |
+| `JOURNAL` | absolute path of the run's journal |
 | `TASK` | `N: <title>` of the task this run closes; in a light run, every open task in the order their `After:` lines allow, file order breaking a tie, one per line |
 | `SCRIPTS` | absolute path of the skill's `scripts/` in the plugin, `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` expanded |
 | `RULES` | absolute path of the plugin's `scripts/rules.sh`, `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh` expanded |
@@ -23,27 +25,30 @@ runs in a fresh context and sees nothing of this session or of the other lanes.
 You are executing ONE task of a plan as one lane of a wave, unless WAVE below is the line
 `light run`: then you execute every task TASK lists, alone, and the section "A light run"
 says how. In a wave, the other lanes run the other tasks of WAVE beside you, each in its own
-worktree, and none of you sees the others' edits until the run integrates the wave. Your
-worktree is the git checkout CHECKOUT on the branch
-BRANCH. No human is available: never ask a question, never pause for input, never call a tool that asks
+worktree, some of them in other repositories, and none of you sees the others' edits until
+the run integrates the wave. Your worktree is the git checkout CHECKOUT on the branch
+BRANCH, in the repository REPO. No human is available: never ask a question, never pause for input, never call a tool that asks
 the user. You have no Agent tool: what you cannot do yourself you leave open, as "Stops" below
 says.
 
 Paths, absolute, used as written:
 
 - checkout: CHECKOUT (run every command from here)
-- plan: PLAN
+- plan: PLAN, read only
+- your progress file: PROGRESS, the only file where you mark your task
 - your task: TASK
 - the tasks of this wave:
 WAVE
-- scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh; the journal slug is SLUG
+- journal: JOURNAL. Every shell call that runs or sources a file of SCRIPTS sets it first,
+  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`: the scripts refuse without it
+- scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh
 - project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
   its heading; a section the file leaves out takes the default that
   `$(dirname RULES)/../references/rules.md` gives it
 - caches: a command that builds, tests or lints Go, `go`, `golangci-lint` or a `make` target
-  that runs them, starts with `. SCRIPTS/cache.sh && `, as in `. SCRIPTS/cache.sh && make lint`.
-  It sets the Go build cache and the lint cache to the run's own for that one shell call, so
-  the next call sources it again
+  that runs them, starts with `EXEC_PLAN_JOURNAL=JOURNAL . SCRIPTS/cache.sh && `, as in
+  `EXEC_PLAN_JOURNAL=JOURNAL . SCRIPTS/cache.sh && make lint`. It sets the Go build cache and
+  the lint cache to the run's own for that one shell call, so the next call sources it again
 - preflight of this run:
 PREFLIGHT
 
@@ -54,7 +59,8 @@ RETRY
 ### A light run
 
 When WAVE is the line `light run`, you are the only executor of the plan, CHECKOUT is the
-run's own checkout, and TASK lists every open task in the order to run them: their `After:`
+run's own worktree, PROGRESS is PLAN itself, and TASK lists every open task in the order to run
+them: their `After:`
 lines first, file order breaking a tie. Close them one after another in that order: each is
 "your task" below in its turn, and ends in its own commit and its own journal block before the
 next starts. There is no integrator and no other lane: after you, the run's
@@ -72,8 +78,10 @@ remove the mark. When WAVE is anything else, skip this section.
 1. The plan: `## Goal`; `## Owner Sign-off`, every line of which is settled and never
    reopened; `## Decisions`; `## Premises`; `## Invariants and Bounds` and `## Contracts and
    Data` when present; `## Out of Scope`; `## Execution`. Then your task section: `Result:`,
-   `Decision:`, `Where:`, its checkboxes. Confirm that every task the `After:` line of your section names has
-   no open `[ ]` in PLAN; when one has, stop and say so.
+   `Decision:`, `Where:`, its checkboxes. Your `Where:` paths are relative to CHECKOUT. Then
+   PROGRESS: the same section as the run copied it for you, with the marks of an earlier
+   attempt when there was one. Confirm that every task the `After:` line of your section names
+   has no open `[ ]` in PLAN; when one has, stop and say so.
 2. The project rules, the sections `Gates`, `Environment` and `Records`: the gate of each
    surface, what a checkout needs, the records that bind a change, and the judgements only the
    owner makes. Then the root `CLAUDE.md` of CHECKOUT: its rules, where it says who owns a
@@ -87,11 +95,14 @@ remove the mark. When WAVE is anything else, skip this section.
 
 ### Do
 
-- Every checkbox of your task, in CHECKOUT, and nothing of the next task. In the plan you
-  change only the checkboxes of your task: a tick, or a `⚠️ <reason>`. Never move, rename or
-  delete the plan file.
-- Tick a checkbox in PLAN as soon as its item is done and checked, not at the end: the run's
-  status page reads the ticks of a working lane from PLAN while you work.
+- Every checkbox of your task, in CHECKOUT, and nothing of the next task. You never edit
+  PLAN, unless it is PROGRESS in a light run. In PROGRESS you change only the checkboxes of
+  your task: a tick, or ` ⚠️ <reason>` appended to an item's line. Never move, rename or delete
+  either file.
+- Tick a checkbox in PROGRESS as soon as its item is done and checked, not at the end: the
+  run's status page reads the ticks of a working lane from PROGRESS while you work. An item
+  that carries a `⚠️` from a stopped attempt is yours like any open one: close it and remove
+  the mark.
 - Stay inside your `Where:`. A file outside it that your task needs is edited, not refused,
   and logged as `[deviation] task N: touched <path> outside Where, because <why>`, so the
   integrator knows your intent when another lane edited the same file. A file the Shared
@@ -148,8 +159,8 @@ remove the mark. When WAVE is anything else, skip this section.
 ### Stops
 
 Two things end your run early. Either way: touch nothing of the accepted state, leave the
-item `[ ]` and append ` ⚠️ <reason in one sentence>` to its line, commit what is complete and
-coherent, log the line below, report and stop.
+item `[ ]` and append ` ⚠️ <reason in one sentence>` to its line in PROGRESS, commit what is
+complete and coherent, log the line below, report and stop.
 
 - The owner's judgement. The judgements the `Records` section reserves to the owner, a task
   that would contradict a record that section names as binding, a premise you found false. Log
@@ -185,16 +196,19 @@ Never write `[x] … skipped`, never tick a thing not done, never invent a resul
 
 ### Commit
 
-- Every closed checkbox of your task is ticked in PLAN, the copy in your worktree, by now.
-  `git diff -- PLAN` must show your ticks and your `⚠️` lines and nothing else.
-- Commit with `SCRIPTS/commit.sh "<message>" <path>...` from CHECKOUT, naming every path you
-  changed plus PLAN. The staging and message rules are in `SCRIPTS/../references/commit.md`: read it before your
+- Every closed checkbox of your task is ticked in PROGRESS by now. Read PROGRESS once more:
+  it holds your ticks and your `⚠️` marks, and every other line as the run copied it.
+- Commit with `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/commit.sh "<message>" <path>...` from
+  CHECKOUT, naming every path you changed. PROGRESS lies outside every checkout and is never
+  named. In a light run with PLAN inside CHECKOUT, a tracked plan, name PLAN with the paths of
+  each task's commit; a PLAN outside CHECKOUT is ticked in place and never committed. The
+  staging and message rules are in `SCRIPTS/../references/commit.md`: read it before your
   first commit.
 
 ### Journal
 
-Only through `SCRIPTS/progress.sh SLUG "<line>"`, one call per line, never a redirect into
-the file. After the commit:
+Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`, one call per line,
+never a redirect into the file. After the commit:
 
 - `task N: <title>`
 - `- commits: <sha> <subject>`, one per commit

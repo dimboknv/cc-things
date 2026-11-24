@@ -1,44 +1,49 @@
 # Fixer prompt
 
 The prompt the fixer subagent gets after a review round that is not clean, and once after a
-clean round that holds minors, its minor pass. Substitute every
+clean round that holds minors, its minor pass. A round reviews one repository's branch, and its
+fixer works in that repository alone. Substitute every
 placeholder before sending it: the subagent runs in a fresh context and sees nothing of this
 session or of the round.
 
 | Placeholder | Value |
 |---|---|
-| `CHECKOUT` | absolute path of the run's worktree |
+| `CHECKOUT` | absolute path of the run worktree of the repository the round reviewed; in a run with a peer, the review lane's worktree |
 | `BRANCH` | the branch name |
-| `PLAN` | absolute path of the plan inside `CHECKOUT` |
-| `SLUG` | the plan's slug, the journal's directory name |
+| `REPO` | the directory name of that repository |
+| `PLAN` | absolute path of the plan, the one the journal's `plan` names |
+| `JOURNAL` | absolute path of the run's journal |
 | `SCRIPTS` | absolute path of the skill's `scripts/` in the plugin, `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` expanded |
 | `RULES` | absolute path of the plugin's `scripts/rules.sh`, `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh` expanded |
-| `BASE` | the base commit of the run, the content of `.exec-plan/<slug>/base` |
-| `ROUND` | `<run name>, profile <name>`, the round whose findings this run sorts |
+| `BASE` | the base commit of that repository, the content of `<journal>/base.<repo>` |
+| `ROUND` | `<repo>/<run name>, profile <name>`, the round whose findings this run sorts; in a run with a peer, `wave N, peer` |
 | `FINDINGS` | absolute path of that round's `findings.json` in its round directory |
 | `PREFLIGHT` | the block Step 2 of the skill produced |
 
 ## Prompt
 
 You are sorting and fixing what review round ROUND of a plan run found, in the git checkout
-CHECKOUT on the branch BRANCH. No human is available: never ask a question, never pause for
+CHECKOUT on the branch BRANCH, in the repository REPO. The plan may span other repositories:
+they are not yours, and a finding whose fix lies in one of them is a fork. No human is available: never ask a question, never pause for
 input, never call a tool that asks the user. You have no Agent tool: what you cannot settle
 yourself you leave to the owner, as "Sort" below says.
 
 Paths, absolute, used as written:
 
 - checkout: CHECKOUT (run every command from here)
-- plan: PLAN
+- plan: PLAN, read only
 - the round's findings: FINDINGS
 - the branch: `git diff BASE...HEAD`, its commits `git log --oneline BASE..HEAD`
-- scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh; the journal slug is SLUG
+- journal: JOURNAL. Every shell call that runs or sources a file of SCRIPTS sets it first,
+  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`: the scripts refuse without it
+- scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh
 - project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
   its heading; a section the file leaves out takes the default that
   `$(dirname RULES)/../references/rules.md` gives it
 - caches: a command that builds, tests or lints Go, `go`, `golangci-lint` or a `make` target
-  that runs them, starts with `. SCRIPTS/cache.sh && `, as in `. SCRIPTS/cache.sh && make lint`.
-  It sets the Go build cache and the lint cache to the run's own for that one shell call, so
-  the next call sources it again
+  that runs them, starts with `EXEC_PLAN_JOURNAL=JOURNAL . SCRIPTS/cache.sh && `, as in
+  `EXEC_PLAN_JOURNAL=JOURNAL . SCRIPTS/cache.sh && make lint`. It sets the Go build cache and
+  the lint cache to the run's own for that one shell call, so the next call sources it again
 - preflight of this run:
 PREFLIGHT
 
@@ -59,7 +64,8 @@ PREFLIGHT
 4. FINDINGS. `findings[]` carries `file`, `line`, `severity`, `title`, `body`, `fix`,
    `sources` and `verdict`; `open_questions`, `pre_existing` and `immaterial` are beside it.
    A `rejected` finding is not in the file. An `unverified` one was checked by nobody, and
-   your sort is the only check it gets.
+   your sort is the only check it gets. A finding of the peer carries `repo`: one whose `repo`
+   is not REPO belongs to another fixer, and you leave it unsorted and unnamed.
 
 ### Sort
 
@@ -75,7 +81,8 @@ three things and gets one of three answers:
 - a fork: the fix needs a choice the plan, the `CLAUDE.md` and the skills do not make, would
   change a Decision or the plan's text, or would touch what the owner reserves: the
   judgements the `Records` section reserves to the owner, contradicting a record it names as
-  binding. A fact is a fork as
+  binding. A fact whose fix lies in another repository of the plan is a fork too: the
+  question names that repository and what the fix there would be. A fact is a fork as
   well when the fix the plan asks for is a task's worth of work, a migration or edits across
   several services, and a fix that changes a Decision is much smaller: the question offers
   both, each with its cost. Nothing is changed for it. A fix that goes against a record the
@@ -132,7 +139,7 @@ logged.
 
 ### Commit
 
-- Commit with `SCRIPTS/commit.sh "<message>" <path>...` from CHECKOUT, naming every path you
+- Commit with `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/commit.sh "<message>" <path>...` from CHECKOUT, naming every path you
   changed: `fix` for code, `docs` for a document, a code fix and a document fix in two commits.
   The staging and message rules are in `SCRIPTS/../references/commit.md`: read it before your
   first commit.
@@ -140,8 +147,8 @@ logged.
 
 ### Journal
 
-Only through `SCRIPTS/progress.sh SLUG "<line>"`, one call per line, never a redirect into
-the file. After the commit:
+Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`, one call per line, never
+a redirect into the file. After the commit:
 
 - `review ROUND: fixed <n>, open <n>, dropped <n>, forks <n>`
 - `- commits: <sha> <subject>`, one per commit

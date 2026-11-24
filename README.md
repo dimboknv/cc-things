@@ -1,6 +1,10 @@
-# cc-planning
+# cc-things
 
-A Claude Code marketplace with one plugin, `planning`: three skills that form one loop of work.
+dimboknv's Claude Code plugins, in the marketplace `dimboknv-cc-things`.
+
+## planning
+
+Three skills that form one loop of work.
 
 - `/planning:brainstorm` — a design session: facts from the tree first, then one fork at a time,
   ending in a summary the owner confirms.
@@ -13,24 +17,24 @@ The skills assume agterm for the fork page, the peer and the
 status page, and [revmux](https://github.com/umputun/revmux) for review rounds. Outside agterm a fork
 goes to the chat as a message; without revmux the `plan-review` agent reviews a plan.
 
-## Install
+### Install
 
 ```
-/plugin marketplace add dimboknv/cc-planning
-/plugin install planning@cc-planning
+/plugin marketplace add dimboknv/cc-things
+/plugin install planning@dimboknv-cc-things
 ```
 
 Link the plugin's review lens and profiles into revmux's user layer once:
 
 ```
 mkdir -p ~/.config/revmux/lenses ~/.config/revmux/prompts/profiles
-P=~/.claude/plugins/marketplaces/cc-planning/plugins/planning/revmux
+P=~/.claude/plugins/marketplaces/dimboknv-cc-things/plugins/planning/revmux
 ln -sf $P/lenses/plan.md ~/.config/revmux/lenses/plan.md
 ln -sf $P/prompts/profiles/plan.md $P/prompts/profiles/plan-recheck.md ~/.config/revmux/prompts/profiles/
 ```
 
-## Project rules
+### Project rules
 
 A project tells the skills where its plans live, its gates, the records that bind a design and
-its review profiles in `.claude/planning/rules.md`; `~/.config/cc-planning/rules.md` serves every
+its review profiles in `.claude/planning/rules.md`; `~/.config/cc-things/planning/rules.md` serves every
 project without one. The sections and their defaults: `plugins/planning/references/rules.md`.

@@ -10,7 +10,7 @@ Two places, read in this order. The first file that exists and is not empty is u
 two are never merged.
 
 1. `.claude/planning/rules.md` at the root of the checkout, the project's file.
-2. `~/.config/cc-planning/rules.md`, the user's file for every project without its own.
+2. `~/.config/cc-things/planning/rules.md`, the user's file for every project without its own.
 
 `scripts/rules.sh` prints the file that wins, or nothing. A skill runs it once:
 

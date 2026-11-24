@@ -38,7 +38,9 @@ Where plans live and where a closed one goes. Default: `docs/plans/`, closed pla
 
 ### `## Trunk`
 
-The branch a run starts from and a pull request lands on. Default: the branch `origin/HEAD`
+The branch a run starts from and a pull request lands on, and how a run names its own branch.
+Default for the name: `<type>/<slug>`, the commit type of the plan's Goal and the plan's slug.
+Default for the trunk: the branch `origin/HEAD`
 points at (`git symbolic-ref --short refs/remotes/origin/HEAD`), else `main`, else `master`.
 
 ### `## Gates`

@@ -136,8 +136,8 @@ subagent to [`commit.md`](references/commit.md) for how a commit is made.
 
 - The slug is the plan's file name without its date and extension:
   `20260930-make-plan-and-exec-plan.md` gives `make-plan-and-exec-plan`. The run's
-  branch is `<type>/<slug>`, `<type>` the commit type of the plan's Goal as the go confirms it,
-  and its checkout is the worktree `.claude/worktrees/<slug>` in the main checkout. The trunk is never run on, and neither is a branch another checkout stands on.
+  branch, `<branch>` below, is named as the `Trunk` section says; by default it is
+  `<type>/<slug>`, `<type>` the commit type of the plan's Goal as the go confirms it. Its checkout is the worktree `.claude/worktrees/<slug>` in the main checkout. The trunk is never run on, and neither is a branch another checkout stands on.
 - The journal is `.exec-plan/<slug>/` in the main checkout, the first entry of
   `git worktree list`. It is not a run block committed in the plan. `progress.md` is the log, `base` the base commit.
   The scripts find the main checkout themselves from whichever checkout they run in. The
@@ -251,10 +251,10 @@ plan that fails the recheck goes back to `/planning:make-plan` with nothing to r
 would stop on an hour later is said before it starts.
 
 **Continuation.** The run is continuing when `.exec-plan/<slug>/base` exists in the main
-checkout. Nothing else says so: a branch `<type>/<slug>` or a worktree without that file is a
+checkout. Nothing else says so: a branch `<branch>` or a worktree without that file is a
 first run, a checkout the owner made by hand included. The checkout that runs is
 `.claude/worktrees/<slug>`; a run whose worktree is gone gets it back by hand,
-`git worktree add .claude/worktrees/<slug> <branch>`, the branch `git branch --list '*/<slug>'`
+`git worktree add .claude/worktrees/<slug> <branch>`, the branch `git branch --list '*<slug>'`
 names. The one check of the branch is the base
 check below: a checkout that does not stand on the recorded base fails there, with the line
 of `base.sh` as the reason. Enter the checkout and go to the base check; the premises were
@@ -328,9 +328,10 @@ checked here, and what is missing is said in the message that asks for the go:
   before the go, with the numbers;
 - a barrier `## Execution` names: an open plan whose merge this one waits for.
 
-The same message names the branch the run will cut, `<type>/<slug>`, its type the commit type
-the plan's Goal reads as: `feat` for new behaviour, `fix` for a defect, `refactor`, `docs` or
-`chore` when nothing an operator sees changes.
+The same message names the branch the run will cut, `<branch>`. Its name follows the `Trunk`
+section; by default it is `<type>/<slug>`, its type the commit type the plan's Goal reads as:
+`feat` for new behaviour, `fix` for a defect, `refactor`, `docs` or `chore` when nothing a user
+sees changes.
 
 Then wait for the owner's go; it confirms the schedule, the branch and what the environment
 check said.
@@ -339,12 +340,12 @@ After the go the run asks nothing until a report.
 **Worktree.** On the go, from the main checkout, `<sha>` being the recorded trunk commit:
 
 ```bash
-git worktree add .claude/worktrees/<slug> -b <type>/<slug> <sha>
+git worktree add .claude/worktrees/<slug> -b <branch> <sha>
 ```
 
 The branch starts from the tree the premises were checked on, wherever the trunk stands by
-then. A branch `<type>/<slug>` that already exists without a worktree gets the worktree without `-b`
-when `git rev-parse <type>/<slug>` is `<sha>`; on any other commit the start is a stop: the branch
+then. A branch `<branch>` that already exists without a worktree gets the worktree without `-b`
+when `git rev-parse <branch>` is `<sha>`; on any other commit the start is a stop: the branch
 was made outside the skill and holds commits the premises never saw, and the owner deletes or
 renames it. A worktree already at `.claude/worktrees/<slug>` is taken by the same rule, its
 `HEAD` at `<sha>` or the same stop. The main checkout is not touched beyond that: no merge
@@ -663,8 +664,8 @@ and disagreed with, and that the pull request of `<branch>` onto the trunk is ne
 | Mistake | Fix |
 |---|---|
 | Cut the worktree before the premises were rechecked | Premises, Owner Sign-off, waves, go, then the cut; a false premise leaves nothing to remove |
-| Took a branch `<type>/<slug>` or a worktree for a continuation | `.exec-plan/<slug>/base` says a run exists; without it, the question of Step 1 |
-| Cut the worktree from the trunk as it stood after the go, or attached a branch `<type>/<slug>` as it stood | From the trunk commit the premises were checked on; a branch `<type>/<slug>` on any other commit is a stop |
+| Took a branch `<branch>` or a worktree for a continuation | `.exec-plan/<slug>/base` says a run exists; without it, the question of Step 1 |
+| Cut the worktree from the trunk as it stood after the go, or attached a branch `<branch>` as it stood | From the trunk commit the premises were checked on; a branch `<branch>` on any other commit is a stop |
 | Sent a mid-run answer through `/planning:make-plan` on the trunk | The copy in the run's checkout, through `commit.sh`; a refresh on the trunk restarts the run |
 | Cut the branch from `origin/<trunk>` | From the recorded local trunk commit, plan commit included; the pull request brings origin |
 | Merged or fast-forwarded the trunk in the main checkout | Never; other sessions stand there. Count, ask, then cut |

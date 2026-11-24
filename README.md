@@ -19,3 +19,18 @@ goes to the chat as a message; without revmux the `plan-review` agent reviews a 
 /plugin marketplace add dimboknv/cc-planning
 /plugin install planning@cc-planning
 ```
+
+Link the plugin's review lens and profiles into revmux's user layer once:
+
+```
+mkdir -p ~/.config/revmux/lenses ~/.config/revmux/prompts/profiles
+P=~/.claude/plugins/marketplaces/cc-planning/plugins/planning/revmux
+ln -sf $P/lenses/plan.md ~/.config/revmux/lenses/plan.md
+ln -sf $P/prompts/profiles/plan.md $P/prompts/profiles/plan-recheck.md ~/.config/revmux/prompts/profiles/
+```
+
+## Project rules
+
+A project tells the skills where its plans live, its gates, the records that bind a design and
+its review profiles in `.claude/planning/rules.md`; `~/.config/cc-planning/rules.md` serves every
+project without one. The sections and their defaults: `plugins/planning/references/rules.md`.

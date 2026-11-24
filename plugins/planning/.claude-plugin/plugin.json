@@ -1,0 +1,9 @@
+{
+  "name": "planning",
+  "description": "Design a change fork by fork, write a plan checked against the tree, and run it in parallel lanes",
+  "version": "0.1.0",
+  "author": {
+    "name": "dimboknv"
+  },
+  "repository": "https://github.com/dimboknv/cc-planning"
+}

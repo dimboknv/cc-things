@@ -1,0 +1,135 @@
+# Whole-tree prompt
+
+The prompt the subagent gets once every task of the plan is closed, before the first review
+round. A task checks only what it touched; this run checks the whole tree, and it fixes what it
+finds red, as the executor of the plan and not as a reviewer. Substitute every placeholder before
+sending it: the subagent runs in a fresh context and sees nothing of this session.
+
+| Placeholder | Value |
+|---|---|
+| `CHECKOUT` | absolute path of the run's worktree |
+| `BRANCH` | the branch name |
+| `PLAN` | absolute path of the plan inside `CHECKOUT` |
+| `SLUG` | the plan's slug, the journal's directory name |
+| `SCRIPTS` | absolute path of `.claude/skills/exec-plan/scripts` inside `CHECKOUT` |
+| `BASE` | the base commit of the run, the content of `.exec-plan/<slug>/base` |
+| `PREFLIGHT` | the block Step 2 of the skill produced |
+| `SCOPE` | `full`, or `light` for a plan whose Execution carries the light Mode line |
+| `RETRY` | empty on the first attempt; on the second, "This is the second and last attempt at the whole-tree check. The first attempt left:" followed by its errors, its report and the journal lines it wrote |
+
+## Prompt
+
+Every task of a plan is done, in the git checkout CHECKOUT on the branch BRANCH. Each task
+checked only the packages it touched. You check the whole tree, and you make it green. No human
+is available: never ask a question, never pause for input, never call a tool that asks the user.
+You have no Agent tool.
+
+Paths, absolute, used as written:
+
+- checkout: CHECKOUT (run every command from here)
+- plan: PLAN
+- the branch: `git diff BASE...HEAD`, its commits `git log --oneline BASE..HEAD`
+- scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh; the journal slug is SLUG
+- caches: a command that builds, tests or lints Go, `go`, `golangci-lint` or a `make` target
+  that runs them, starts with `. SCRIPTS/cache.sh && `, as in `. SCRIPTS/cache.sh && make lint`.
+  It sets the Go build cache and the lint cache to the run's own for that one shell call, so
+  the next call sources it again
+- preflight of this run:
+PREFLIGHT
+
+RETRY
+
+### Read first
+
+1. The plan: `## Goal`; `## Owner Sign-off`, every line of which is settled and never
+   reopened; `## Decisions`; `## Out of Scope`; `## Execution`; the `Result:` line of every
+   task. A fix you make keeps every `Result:` true.
+2. The root `CLAUDE.md` of CHECKOUT: the core rules, the fact-ownership table, the gates, the
+   five judgements it reserves to the owner, and its Git section. Then the `CLAUDE.md` of each
+   surface a red check lands in.
+3. The skills `## Execution` lists for those surfaces, loaded with the Skill tool before your
+   first edit. Prose follows § Prose of the root `CLAUDE.md`.
+
+### Run
+
+From CHECKOUT, in the foreground, never in the background, each to its end, reading the output.
+A console that has never installed its packages runs `npm ci` in `frontend/vartova/` first.
+
+1. `make generate-check`
+2. `make -C docs requirements-status`, then `make -C docs check`
+3. `make build`
+4. `make lint`
+5. `make test`
+
+These run every component, whatever the branch touched: a branch breaks a neighbour it never
+opened.
+
+The scope of this run is SCOPE. When it is `light`, the first four run as written and step 5
+runs only the lines of the root `Makefile`'s `test` target that belong to a component the
+branch touched, by `git diff --stat BASE...HEAD`: the backend's for `backend/`, the console's
+for `frontend/vartova/`, the engine's two for `ml/`. A change under `contracts/` touches the
+backend and the console, whose code is generated from it, and a change under
+`contracts/proto/` touches the engine too, whose stubs are generated from it. Name the lines you ran and the ones
+you left in the validation line of the journal.
+
+### Fix
+
+- A red check is fixed and the whole list runs again from the check that went red, until it is
+  green. Fix the cause, never the check: `--no-verify`, `LEFTHOOK=0`, a skipped or deleted test
+  and an edit to a hook or a lint config so that it passes are forbidden.
+- A test that fails once and passes on a rerun with nothing changed is a flake: rerun it once,
+  and when it passes, log it as `[decision]` with the test's name and go on. A test red twice
+  is not a flake.
+- A failure the branch did not cause is not yours to fix: the root `CLAUDE.md`, Gates, says
+  what counts as one. Tell it by running only the red test at BASE, in a scratch worktree
+  beside the run's own (`git worktree add --detach "$(dirname CHECKOUT)/SLUG-base" BASE`,
+  removed afterwards; not under `/private/tmp`, which Docker does not share, so a stand raised
+  from there mounts nothing). Red there as well: leave it, log `[deviation] whole tree:
+  <check> red at the base as well: <test or cause>`, and go on. It does not stop the run, and
+  the tree counts as green without it: the run report lists it as open.
+- A check red for a reason outside the tree: Docker gone, the disk full, a stand that does
+  not come up. It is neither fixed in the tree nor the owner's judgement. A cause you removed
+  yourself, with the checks green after it, is a `[decision]`. One you cannot remove: log
+  `[blocker] environment whole tree: <reason>` and stop. What on the host is not the run's is
+  not yours to clear.
+- A fix that needs a choice the plan does not make, or would change a Decision, a `Result:` or
+  what the owner reserves: change nothing for it and log `[owner] whole tree: <the question in
+  plain words, the options and what each costs>`.
+- Everything else is the run's own: what the tree already does, you repeat; the fix is the
+  simplest one; a value goes into the artifact the fact-ownership table names as its owner.
+- PLAN is not edited: no tick, no note.
+
+### Commit
+
+- Commit each fix with `SCRIPTS/commit.sh "<message>" <path>...` from CHECKOUT: `fix(<scope>): …`
+  for code, `docs` for a document, `test` for a test. The staging and message rules are in `SCRIPTS/../references/commit.md`: read it before your
+  first commit.
+- Nothing red: no commit.
+
+### Journal
+
+Only through `SCRIPTS/progress.sh SLUG "<line>"`, one call per line, never a redirect into
+the file:
+
+- `whole tree: <green | red>, <n> fixes`, with `, light` after it when SCOPE is `light`
+- `- commits: <sha> <subject>`, one per commit
+- `- fixed: <check>: <what was red and why>`, one per fix
+- `- validation: <each check and its result>`
+- `[decision] whole tree: <what you decided>, because <why>`, one per judgement call, a flake
+  included
+- `[deviation] whole tree: <check> red at the base as well: …`, one per failure the branch did
+  not cause
+- `[owner] whole tree: …`, `[blocker] whole tree: …` or `[blocker] environment whole tree: …`
+  when you stopped with a check red
+
+The bracketed prefixes are exact; the run collects them verbatim for the owner. Log only what
+happened.
+
+### Report
+
+Finish with: each check and its result, trimmed; each commit's SHA and subject; every red you
+fixed and its cause; every `[deviation]`, `[owner]` and `[blocker]` line verbatim; any error
+you hit and how it ended. Under about three kilobytes: a longer report is cut on its way back,
+and the journal holds the rest.
+
+After the commits and the journal, STOP.

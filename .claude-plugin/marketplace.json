@@ -1,0 +1,13 @@
+{
+  "name": "cc-planning",
+  "owner": {
+    "name": "dimboknv"
+  },
+  "plugins": [
+    {
+      "name": "planning",
+      "source": "./plugins/planning",
+      "description": "Design a change fork by fork, write a plan checked against the tree, and run it in parallel lanes"
+    }
+  ]
+}

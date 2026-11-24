@@ -11,7 +11,8 @@ session or of the round.
 | `BRANCH` | the branch name |
 | `PLAN` | absolute path of the plan inside `CHECKOUT` |
 | `SLUG` | the plan's slug, the journal's directory name |
-| `SCRIPTS` | absolute path of `.claude/skills/exec-plan/scripts` inside `CHECKOUT` |
+| `SCRIPTS` | absolute path of the skill's `scripts/` in the plugin, `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` expanded |
+| `RULES` | absolute path of the plugin's `scripts/rules.sh`, `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh` expanded |
 | `BASE` | the base commit of the run, the content of `.exec-plan/<slug>/base` |
 | `ROUND` | `<run name>, profile <name>`, the round whose findings this run sorts |
 | `FINDINGS` | absolute path of that round's `findings.json` in its round directory |
@@ -31,6 +32,9 @@ Paths, absolute, used as written:
 - the round's findings: FINDINGS
 - the branch: `git diff BASE...HEAD`, its commits `git log --oneline BASE..HEAD`
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh; the journal slug is SLUG
+- project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
+  its heading; a section the file leaves out takes the default that
+  `$(dirname RULES)/../references/rules.md` gives it
 - caches: a command that builds, tests or lints Go, `go`, `golangci-lint` or a `make` target
   that runs them, starts with `. SCRIPTS/cache.sh && `, as in `. SCRIPTS/cache.sh && make lint`.
   It sets the Go build cache and the lint cache to the run's own for that one shell call, so
@@ -44,12 +48,14 @@ PREFLIGHT
    reopened; `## Decisions`; `## Premises`; `## Invariants and Bounds` and `## Contracts and
    Data` when present; `## Out of Scope`; `## Execution`; the `Result:` line of every task.
    The plan is the design the branch applies, and every finding is read against it.
-2. The root `CLAUDE.md` of CHECKOUT: the core rules (edit in place, final state only, nothing
-   kept backward compatible, no trace of a previous state), the fact-ownership table, the
-   gates, the five judgements it reserves to the owner, and its Git section. Then the
+2. The project rules, the sections `Gates`, `Records` and `Review`: the gate of each surface,
+   the records that bind a change, the judgements only the owner makes, and the rules a review
+   holds the branch to. Then the root `CLAUDE.md` of CHECKOUT: its rules, where it says who
+   owns a value, and its commit rules. Then the
    `CLAUDE.md` of each surface a finding touches.
 3. The skills `## Execution` lists for those surfaces, loaded with the Skill tool before your
-   first edit. Prose follows § Prose of the root `CLAUDE.md`.
+   first edit. Prose follows the prose rules of the project's `CLAUDE.md`, where it states
+   them.
 4. FINDINGS. `findings[]` carries `file`, `line`, `severity`, `title`, `body`, `fix`,
    `sources` and `verdict`; `open_questions`, `pre_existing` and `immaterial` are beside it.
    A `rejected` finding is not in the file. An `unverified` one was checked by nobody, and
@@ -60,27 +66,27 @@ PREFLIGHT
 Sort every entry of `findings` and every open question before fixing anything. Each is one of
 three things and gets one of three answers:
 
-- a fact: the branch does what the finding says, and the plan, the root `CLAUDE.md`, the
-  `CLAUDE.md` of the surface or its skill says it must not, or the code is wrong on its own
+- a fact: the branch does what the finding says, and the plan, the project rules, the root
+  `CLAUDE.md`, the `CLAUDE.md` of the surface or its skill says it must not, or the code is wrong on its own
   terms. Read the site and run the command before you call it one. A `critical` or a `major`
   fact is fixed. A `minor` fact is fixed when the fix is simple: a few edits in one or two
   files, no new mechanism, and no new operation, field, column or migration. A minor that
   needs more stays as it is and is listed as open, with what the fix would take.
 - a fork: the fix needs a choice the plan, the `CLAUDE.md` and the skills do not make, would
-  change a Decision or the plan's text, or would touch what the owner reserves: the five
-  judgements of the root `CLAUDE.md`, contradicting an accepted `REQ-*`. A fact is a fork as
+  change a Decision or the plan's text, or would touch what the owner reserves: the
+  judgements the `Records` section reserves to the owner, contradicting a record it names as
+  binding. A fact is a fork as
   well when the fix the plan asks for is a task's worth of work, a migration or edits across
   several services, and a fix that changes a Decision is much smaller: the question offers
-  both, each with its cost. Nothing is changed for it. A fix that goes against an accepted ADR is not a fork: rewrite the record in place
-  to say what the tree now does, set its status to `Proposed`, and log it as `[decision]`; the
-  owner accepts it with the run report. Log `[owner] review ROUND: <the question in plain words, the
+  both, each with its cost. Nothing is changed for it. A fix that goes against a record the
+  `Records` section names as rationale is not a fork: do with the record what that section
+  says, rewriting it in place to say what the tree now does when it says nothing, and log it
+  as `[decision]`. Log `[owner] review ROUND: <the question in plain words, the
   options and what each costs>`. An `[owner]` from you stops the run before finalize: the
   history is not regrouped and the plan is not closed until the owner answers. It does not
   stop your sort or the fixes of the facts beside it.
-- noise: the tree refutes the claim, or the finding asks for what the root `CLAUDE.md` forbids
-  (a compatibility branch, a fallback for data that does not exist, a `legacy*` name, a
-  rollback, a compensation or a lock for a write left halfway between two services that a
-  repeat finishes or whose window the plan names as accepted), for
+- noise: the tree refutes the claim, or the finding asks for what the project's rules or its
+  `CLAUDE.md` forbid, or for what the `Review` section names as noise, for
   something under `## Out of Scope`, for a test project nobody asked for, or for a style
   preference. Dropped, with the reason in the journal.
 
@@ -103,17 +109,18 @@ logged.
   other occurrences; fix them in the same commit. The branch is the sweep's range, because
   what was there before it is not this run's.
 - The plan speaks at the level of decisions and invariants. Below that the tree decides: a
-  value goes into the artifact the fact-ownership table names as its owner, a vocabulary into
-  its one home, and a document names the owner rather than restating it.
+  value goes into the artifact the project's rules name as its owner, else the one where the
+  tree already keeps values of its kind; a vocabulary goes into its one home, and a document
+  names the owner rather than restating it.
 - Edit in place and leave no trace: nothing that says what was fixed, no reference to the
   round or the finding in code or in a document.
 - Check what your fix touched, not the whole tree, in the foreground, never in the
-  background, and read the output: `go build ./...` from `backend/` and `go test -race` over
-  the packages you changed; `npx jest --findRelatedTests <the files you changed>` and
-  `npm run lint` from `frontend/vartova/` for the console; the generators and
-  `make generate-check` for a contract; `make -C docs check` for a document. A red check is
-  fixed and rerun. It is never bypassed: `--no-verify`,
-  `LEFTHOOK=0` and an edit to a hook so that it passes are forbidden. A gate you cannot make
+  background, and read the output, each check as the `Gates` section states it for the
+  surface: the build of each surface you changed and its tests narrowed to the packages, the
+  modules or the specs of your files, its lint when you changed its code; the generators and
+  their drift check for a contract; the docs check for a document. A red check is
+  fixed and rerun. It is never bypassed: `--no-verify`, a variable that turns the hooks off
+  (`LEFTHOOK=0`, `HUSKY=0`) and an edit to a hook so that it passes are forbidden. A gate you cannot make
   green on a fix: undo that fix, leave its finding open, and log
   `[blocker] review ROUND: <reason>`. When it is red for a reason outside the tree, Docker
   gone, the disk full, a stand that does not come up, undo the fix the same way and log

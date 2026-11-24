@@ -11,7 +11,8 @@ sending it: the subagent runs in a fresh context and sees nothing of this sessio
 | `BRANCH` | the branch name |
 | `PLAN` | absolute path of the plan inside `CHECKOUT` |
 | `SLUG` | the plan's slug, the journal's directory name |
-| `SCRIPTS` | absolute path of `.claude/skills/exec-plan/scripts` inside `CHECKOUT` |
+| `SCRIPTS` | absolute path of the skill's `scripts/` in the plugin, `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` expanded |
+| `RULES` | absolute path of the plugin's `scripts/rules.sh`, `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh` expanded |
 | `BASE` | the base commit of the run, the content of `.exec-plan/<slug>/base` |
 | `PREFLIGHT` | the block Step 2 of the skill produced |
 | `SCOPE` | `full`, or `light` for a plan whose Execution carries the light Mode line |
@@ -30,6 +31,9 @@ Paths, absolute, used as written:
 - plan: PLAN
 - the branch: `git diff BASE...HEAD`, its commits `git log --oneline BASE..HEAD`
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh; the journal slug is SLUG
+- project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
+  its heading; a section the file leaves out takes the default that
+  `$(dirname RULES)/../references/rules.md` gives it
 - caches: a command that builds, tests or lints Go, `go`, `golangci-lint` or a `make` target
   that runs them, starts with `. SCRIPTS/cache.sh && `, as in `. SCRIPTS/cache.sh && make lint`.
   It sets the Go build cache and the lint cache to the run's own for that one shell call, so
@@ -44,44 +48,47 @@ RETRY
 1. The plan: `## Goal`; `## Owner Sign-off`, every line of which is settled and never
    reopened; `## Decisions`; `## Out of Scope`; `## Execution`; the `Result:` line of every
    task. A fix you make keeps every `Result:` true.
-2. The root `CLAUDE.md` of CHECKOUT: the core rules, the fact-ownership table, the gates, the
-   five judgements it reserves to the owner, and its Git section. Then the `CLAUDE.md` of each
-   surface a red check lands in.
+2. The project rules, the sections `Gates`, `Environment` and `Records`: the whole-tree
+   checks, what a checkout needs, and the judgements only the owner makes. Then the root
+   `CLAUDE.md` of CHECKOUT: its rules, where it says who owns a value, and its commit rules.
+   Then the `CLAUDE.md` of each surface a red check lands in.
 3. The skills `## Execution` lists for those surfaces, loaded with the Skill tool before your
-   first edit. Prose follows § Prose of the root `CLAUDE.md`.
+   first edit. Prose follows the prose rules of the project's `CLAUDE.md`, where it states
+   them.
 
 ### Run
 
 From CHECKOUT, in the foreground, never in the background, each to its end, reading the output.
-A console that has never installed its packages runs `npm ci` in `frontend/vartova/` first.
+A surface whose packages were never installed here gets what the `Environment` section asks a
+fresh checkout to install first. The commands are the whole-tree checks the `Gates` section
+names, in this order, each one the project has:
 
-1. `make generate-check`
-2. `make -C docs requirements-status`, then `make -C docs check`
-3. `make build`
-4. `make lint`
-5. `make test`
+1. the generators' drift check
+2. the docs check, with the steps the `Gates` section runs before it
+3. the build
+4. the lint
+5. the tests
 
 These run every component, whatever the branch touched: a branch breaks a neighbour it never
 opened.
 
 The scope of this run is SCOPE. When it is `light`, the first four run as written and step 5
-runs only the lines of the root `Makefile`'s `test` target that belong to a component the
-branch touched, by `git diff --stat BASE...HEAD`: the backend's for `backend/`, the console's
-for `frontend/vartova/`, the engine's two for `ml/`. A change under `contracts/` touches the
-backend and the console, whose code is generated from it, and a change under
-`contracts/proto/` touches the engine too, whose stubs are generated from it. Name the lines you ran and the ones
-you left in the validation line of the journal.
+runs only the tests of the components the branch touched, by `git diff --stat BASE...HEAD`. A
+change to the input of a generator touches every component whose code the generator writes
+from it; the `Gates` section names which those are. Name the tests you ran and the ones you
+left in the validation line of the journal.
 
 ### Fix
 
 - A red check is fixed and the whole list runs again from the check that went red, until it is
-  green. Fix the cause, never the check: `--no-verify`, `LEFTHOOK=0`, a skipped or deleted test
-  and an edit to a hook or a lint config so that it passes are forbidden.
+  green. Fix the cause, never the check: `--no-verify`, a variable that turns the hooks off
+  (`LEFTHOOK=0`, `HUSKY=0`), a skipped or deleted test and an edit to a hook or a lint config
+  so that it passes are forbidden.
 - A test that fails once and passes on a rerun with nothing changed is a flake: rerun it once,
   and when it passes, log it as `[decision]` with the test's name and go on. A test red twice
   is not a flake.
-- A failure the branch did not cause is not yours to fix: the root `CLAUDE.md`, Gates, says
-  what counts as one. Tell it by running only the red test at BASE, in a scratch worktree
+- A failure the branch did not cause is not yours to fix: a check is not the branch's when the
+  same check, run alone, is red at BASE as well. Tell it by running only the red test at BASE, in a scratch worktree
   beside the run's own (`git worktree add --detach "$(dirname CHECKOUT)/SLUG-base" BASE`,
   removed afterwards; not under `/private/tmp`, which Docker does not share, so a stand raised
   from there mounts nothing). Red there as well: leave it, log `[deviation] whole tree:
@@ -96,7 +103,7 @@ you left in the validation line of the journal.
   what the owner reserves: change nothing for it and log `[owner] whole tree: <the question in
   plain words, the options and what each costs>`.
 - Everything else is the run's own: what the tree already does, you repeat; the fix is the
-  simplest one; a value goes into the artifact the fact-ownership table names as its owner.
+  simplest one; a value goes into the artifact the project's rules name as its owner.
 - PLAN is not edited: no tick, no note.
 
 ### Commit

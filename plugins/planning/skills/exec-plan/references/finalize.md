@@ -10,14 +10,18 @@ nothing of this session or of the rounds.
 | `BRANCH` | the branch name |
 | `PLAN` | absolute path of the plan inside `CHECKOUT` |
 | `SLUG` | the plan's slug, the journal's directory name |
-| `SCRIPTS` | absolute path of `.claude/skills/exec-plan/scripts` inside `CHECKOUT` |
+| `SCRIPTS` | absolute path of the skill's `scripts/` in the plugin, `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` expanded |
+| `RULES` | absolute path of the plugin's `scripts/rules.sh`, `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh` expanded |
 | `BASE` | the base commit of the run, the content of `.exec-plan/<slug>/base` |
 | `PREFLIGHT` | the block Step 2 of the skill produced |
+| `OPEN` | the plan's path relative to `CHECKOUT`, in the plans directory |
+| `CLOSED` | the plan's path relative to `CHECKOUT` after the close: the closed-plans directory the `Plans` section names, plus the plan's file name |
+| `TRUNK` | the trunk the run resolved from the `Trunk` section |
 
 ## Prompt
 
 You are closing a plan run in the git checkout CHECKOUT on the branch BRANCH: the history is
-regrouped and the plan moves into `completed/`. No human is available: never ask
+regrouped and the plan moves from OPEN to CLOSED. No human is available: never ask
 a question, never pause for input, never call a tool that asks the user. You have no Agent
 tool.
 
@@ -27,13 +31,18 @@ Paths, absolute, used as written:
 - plan: PLAN
 - base: BASE, the commit the run started from; every range below starts there
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh; the journal slug is SLUG
+- project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
+  its heading; a section the file leaves out takes the default that
+  `$(dirname RULES)/../references/rules.md` gives it
 - preflight of this run:
 PREFLIGHT
 
 ### Read first
 
-1. The root `CLAUDE.md` of CHECKOUT, its Git section in full: the message format, the split
-   where a reviewer's attention splits, the staging rules.
+1. The commit rules of the root `CLAUDE.md` of CHECKOUT in full: the message format, the
+   split where a reviewer's attention splits, the staging rules, the body and the lines a
+   commit made from a plan carries. `SCRIPTS/../references/commit.md` says what holds where
+   the project states none.
 2. The branch: `git log --oneline BASE..HEAD`, `git diff --stat BASE...HEAD`, then the diff
    itself, once, to see which kinds of change it holds and which components they touch.
 3. PLAN: `## Decisions`, and the `Result:` and `Decision:` lines of every task. The reset below
@@ -58,17 +67,17 @@ kind. Regroup from BASE:
 4. Commit each group with `SCRIPTS/commit.sh "<message>" <path>...` from CHECKOUT, naming the
    paths of that group and nothing else. The staging and message rules are in
    `SCRIPTS/../references/commit.md`: read it before the first commit. Here the index starts
-   empty, so there is no `git add` of any kind. A group that changes behaviour gets the body
-   the root `CLAUDE.md` Git section asks for: what is now true, from the `Result:` of the
-   tasks whose changes the group holds; why this way, from their `Decision:`; then
-   `Plan: docs/plans/completed/<file name>`, the path the plan has after the close.
+   empty, so there is no `git add` of any kind. A group that changes behaviour gets a body:
+   what is now true, from the `Result:` of the tasks whose changes the group holds; why this
+   way, from their `Decision:`; then any line the project's commit rules add to a commit made
+   from a plan, with CLOSED as the plan's path, the path it has after the close.
 5. Prove nothing moved: `git diff backup/SLUG-<stamp> HEAD` prints nothing, and
    `git status --porcelain` prints nothing. Anything printed is a stop:
    `[blocker] finalize: the regroup lost <paths>`. The backup branch holds the tip.
 
-The groups follow the root `CLAUDE.md`: a semantic edit per component, a mechanical move,
-generated artifacts, a large documentation rewrite, each apart wherever they can be
-separated, each `type(scope): description`. The plan with its ticks is a documentation change
+The groups follow the project's commit rules, and where they say nothing: a semantic edit per
+component, a mechanical move, generated artifacts, a large documentation rewrite, each apart
+wherever they can be separated, each in the project's message form. The plan with its ticks is a documentation change
 and travels with the documentation group, or alone as `docs(plans): …` when the branch has no
 other. One commit for the whole branch is wrong unless the branch is one small change; a
 commit per plan task is wrong too, because that is the shape the work was executed in and not
@@ -77,17 +86,17 @@ or so commits the branch is regrouped, however well each commit is worded on its
 that is already few and already split by kind keeps its commits; the backup and the check of
 step 5 are still made, and "already reads that way" excuses nothing else.
 
-`master` is not merged into the branch and the branch is not rebased onto it: bringing the
-branch onto `master` is `/ship`'s step, and a merge commit between the base and `HEAD` is what
-`base.sh` refuses on the next run.
+TRUNK is not merged into the branch and the branch is not rebased onto it: bringing the
+branch onto TRUNK is the pull request's step, after the run, and a merge commit between the
+base and `HEAD` is what `base.sh` refuses on the next run.
 
 ### Close the plan
 
-`mv PLAN docs/plans/completed/<file name>`, a plain `mv`, then
-`SCRIPTS/commit.sh "docs(plans): close the SLUG plan" docs/plans/<file name>
-docs/plans/completed/<file name>`: the old path, gone from the tree, is staged as its removal
-and the new one as its addition, in one commit. The plan's text does not change: no status,
-no date, no note. Then `git status --porcelain` prints nothing.
+`mkdir -p "$(dirname CLOSED)"` when the directory does not exist yet, then `mv OPEN CLOSED`, a
+plain `mv`, then `SCRIPTS/commit.sh "docs(plans): close the SLUG plan" OPEN CLOSED`, the
+message in the project's commit form: the old path, gone from the tree, is staged as its
+removal and the new one as its addition, in one commit. The plan's text does not change: no
+status, no date, no note. Then `git status --porcelain` prints nothing.
 
 ### Journal
 
@@ -95,7 +104,7 @@ Only through `SCRIPTS/progress.sh SLUG "<line>"`, one call per line, never a red
 the file:
 
 - `finalize: history <n> → <m> commits, backup/SLUG-<stamp>`
-- `finalize: plan closed, docs/plans/completed/<file name>`
+- `finalize: plan closed, CLOSED`
 - `[decision] finalize: <what you decided>, because <why>`, one per judgement call, the
   grouping included when the kinds were not plain
 - `[deviation] finalize: <what differs from the plan's letter>, because <why>`

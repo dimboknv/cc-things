@@ -12,7 +12,8 @@ runs in a fresh context and sees nothing of this session or of the other lanes.
 | `PLAN` | absolute path of the plan inside `CHECKOUT` |
 | `SLUG` | the plan's slug, the journal's directory name |
 | `TASK` | `N: <title>` of the task this run closes; in a light run, every open task in the order their `After:` lines allow, file order breaking a tie, one per line |
-| `SCRIPTS` | absolute path of `.claude/skills/exec-plan/scripts` inside `CHECKOUT` |
+| `SCRIPTS` | absolute path of the skill's `scripts/` in the plugin, `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` expanded |
+| `RULES` | absolute path of the plugin's `scripts/rules.sh`, `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh` expanded |
 | `PREFLIGHT` | the block Step 2 of the skill produced |
 | `NOTES` | empty in a plain run; in a run with a peer, the notes of the run under their one-line heading |
 | `RETRY` | empty on the first attempt; on the second, "This is the second and last attempt at this task. The first attempt left:" followed by its errors, its report and the journal lines it wrote |
@@ -36,6 +37,9 @@ Paths, absolute, used as written:
 - the tasks of this wave:
 WAVE
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh; the journal slug is SLUG
+- project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
+  its heading; a section the file leaves out takes the default that
+  `$(dirname RULES)/../references/rules.md` gives it
 - caches: a command that builds, tests or lints Go, `go`, `golangci-lint` or a `make` target
   that runs them, starts with `. SCRIPTS/cache.sh && `, as in `. SCRIPTS/cache.sh && make lint`.
   It sets the Go build cache and the lint cache to the run's own for that one shell call, so
@@ -70,15 +74,16 @@ remove the mark. When WAVE is anything else, skip this section.
    Data` when present; `## Out of Scope`; `## Execution`. Then your task section: `Result:`,
    `Decision:`, `Where:`, its checkboxes. Confirm that every task the `After:` line of your section names has
    no open `[ ]` in PLAN; when one has, stop and say so.
-2. The root `CLAUDE.md` of CHECKOUT: the core rules (edit in place, final state only, nothing
-   kept backward compatible, no trace of a previous state), the fact-ownership table, the
-   gates, the five judgements it reserves to the owner, and its Git section. Then the
+2. The project rules, the sections `Gates`, `Environment` and `Records`: the gate of each
+   surface, what a checkout needs, the records that bind a change, and the judgements only the
+   owner makes. Then the root `CLAUDE.md` of CHECKOUT: its rules, where it says who owns a
+   value, and its commit rules. Then the
    `CLAUDE.md` of each surface your task touches: its conventions are stated there, and
    `## Execution` of the plan says only what this plan does differently. Its whole gate is not
    yours to run: "Do" says which part of it a task runs.
 3. The skills `## Execution` lists for your surfaces, loaded with the Skill tool before your
-   first edit. Prose follows § Prose of the root `CLAUDE.md`. The skills own the conventions the owner's review
-   would otherwise catch.
+   first edit. Prose follows the prose rules of the project's `CLAUDE.md`, where it states
+   them. The skills own the conventions the owner's review would otherwise catch.
 
 ### Do
 
@@ -93,8 +98,9 @@ remove the mark. When WAVE is anything else, skip this section.
   files table of `## Execution` names is edited as your task needs; the integrator merges the
   second task's lane over the first.
 - The plan speaks at the level of decisions and invariants. Below that the tree decides: a
-  value goes into the artifact the fact-ownership table names as its owner, a vocabulary into
-  its one home, and a document names the owner rather than restating it.
+  value goes into the artifact the project's rules name as its owner, else the one where the
+  tree already keeps values of its kind; a vocabulary goes into its one home, and a document
+  names the owner rather than restating it.
 - What the tree already has, you repeat. Before you write a helper, a wrapper, a test double, a
   subcommand, a transaction, a client or any shape a neighbour could already hold, `rg` the tree
   for the one that exists and use it or copy its form; a second way of doing a thing the tree
@@ -110,15 +116,12 @@ remove the mark. When WAVE is anything else, skip this section.
   whole tree, and the tests of the whole tree run once, after the last wave. Run, in the foreground with the Bash timeout at the most the tool allows, never with
   `run_in_background`, and read the output. A command the tool still moves to the background
   does not wake you when it ends: never end your turn while it runs, and check its output
-  file until it ends. The checks:
-  - Go: `go build ./...` from `backend/`, then `go test -race` over the packages your task
-    changed, plus the binary suite under `cmd/<binary>/test` of a service whose code you changed;
-  - the console: `npx jest --findRelatedTests <the files you changed>` from `frontend/vartova/`,
-    and `npm run lint` when you changed its code;
-  - `ml/`: the gate of `ml/CLAUDE.md`, with `pytest` over the test modules of what you changed;
-  - a contract: its generators, then `make generate-check`; a document, a requirement or a
-    `// REQ-…` marker: `make -C docs requirements-status` when a marker moved, then
-    `make -C docs check`;
+  file until it ends. The checks, each as the `Gates` section states it for the surface:
+  - each surface whose code you changed: its build, its lint when you changed its code, and
+    its tests narrowed to what you changed, the packages, the modules or the specs related to
+    your files, with the suites the `Gates` section ties to them;
+  - a contract or any input of a generator: its generators, then their drift check;
+  - a document or a record: the docs check, with the steps the `Gates` section runs before it;
   - every `acceptance:` command of your task.
 
   An `acceptance:` command whose letter fails while the `Result:` of your task holds is
@@ -132,14 +135,15 @@ remove the mark. When WAVE is anything else, skip this section.
   hung one, and run it under `caffeinate -i`: a host that sleeps stops Go timers, and the test
   times out on wake.
 
-  `go test -tags e2e` is run only by a task whose `Needs:` names the e2e lane. Its `TestMain`
-  logs in and enrols cameras in whichever stack listens on the host ports, an empty `-run`
-  included. To prove the e2e suite builds, `go test -tags e2e -c -o /dev/null ./e2e`.
+  A suite that uses a shared stand is run only by a task whose `Needs:` names that stand: it
+  acts on whichever stand listens on the host. The `Environment` section names such suites
+  and how to prove one builds without running it.
 
   The pre-commit hook lints what you commit. A red check is fixed and rerun. It is never
-  bypassed: `--no-verify`, `LEFTHOOK=0` and an edit to a hook so that it passes are forbidden.
-- A check you add, a test with a `// REQ-…` marker or a lint rule, is seen failing once
-  before it counts: break what it guards, watch it go red, restore.
+  bypassed: `--no-verify`, a variable that turns the hooks off (`LEFTHOOK=0`, `HUSKY=0`) and an
+  edit to a hook so that it passes are forbidden.
+- A check you add, a test that proves a record of the `Records` section or a lint rule, is
+  seen failing once before it counts: break what it guards, watch it go red, restore.
 
 ### Stops
 
@@ -147,13 +151,12 @@ Two things end your run early. Either way: touch nothing of the accepted state, 
 item `[ ]` and append ` ⚠️ <reason in one sentence>` to its line, commit what is complete and
 coherent, log the line below, report and stop.
 
-- The owner's judgement. The five judgements the root `CLAUDE.md` reserves (admitting,
-  deprecating or changing a requirement, its address, the admission bar), a task that would
-  contradict an accepted `REQ-*`, a premise you found false. Log
+- The owner's judgement. The judgements the `Records` section reserves to the owner, a task
+  that would contradict a record that section names as binding, a premise you found false. Log
   `[owner] task N: <the question in plain words, the options and what each costs>`.
-  An accepted ADR your task goes against is not such a stop. Rewrite the record in place to
-  say what the tree now does, set its status to `Proposed`, and log it as `[decision]`: the
-  owner accepts the record with the plan's Owner Sign-off, and nobody else accepts an ADR.
+  A record the `Records` section names as rationale is not such a stop when your task goes
+  against it: do with it what that section says, and log it as `[decision]`. With nothing said
+  there, rewrite it in place to say what the tree now does.
 - An item you cannot close: a tool that is missing, a step that needs a person, an ambiguity
   the plan, the `CLAUDE.md` and the skills do not settle. Log `[blocker] task N: <reason>`.
 - A check red for a reason outside your worktree: Docker gone, the disk full, a test that
@@ -162,15 +165,15 @@ coherent, log the line below, report and stop.
 
 **Not a stop.** These are yours to settle and log; none of them is an `[owner]` line:
 
-- a warning a check prints without failing, such as a chapter over the line mark of
-  `requirements-status`: name it in your report;
+- a warning a check prints without failing, such as a document over a length mark a docs
+  check reports: name it in your report;
 - a file outside your `Where:` that the change needs, a label, a comment, an index row: edit
   it as "Do" says;
-- an ADR with status `Proposed`: edit it in place;
-- a chapter, a comment or a rationale your change made untrue: rewrite it to what the tree
+- a record the owner has not accepted yet, by the `Records` section: edit it in place;
+- a document, a comment or a rationale your change made untrue: rewrite it to what the tree
   now does;
-- a test that pins a behaviour the plan and the chapters contradict: change the test to the
-  documented behaviour and log `[decision]`;
+- a test that pins a behaviour the plan and the project's documents contradict: change the
+  test to the documented behaviour and log `[decision]`;
 - a defect you see that your task does not touch: log
   `[decision] task N: left <what> as it stands, because the task does not change it`.
 

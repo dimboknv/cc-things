@@ -14,7 +14,8 @@ session or of the lanes.
 | `BRANCH` | the run's branch |
 | `PLAN` | absolute path of the plan inside `CHECKOUT` |
 | `SLUG` | the plan's slug, the journal's directory name |
-| `SCRIPTS` | absolute path of `.claude/skills/exec-plan/scripts` inside `CHECKOUT` |
+| `SCRIPTS` | absolute path of the skill's `scripts/` in the plugin, `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` expanded |
+| `RULES` | absolute path of the plugin's `scripts/rules.sh`, `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh` expanded |
 | `BASE` | the base commit of the run, the content of `.exec-plan/<slug>/base` |
 | `WAVE` | the wave's number |
 | `TIP` | the commit the lanes of this wave were cut from, the run branch's `HEAD` at the start of the wave |
@@ -45,6 +46,9 @@ STOPPED
 - review lanes, merged before the lanes above:
 REVIEW
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh; the journal slug is SLUG
+- project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
+  its heading; a section the file leaves out takes the default that
+  `$(dirname RULES)/../references/rules.md` gives it
 - caches: a command that builds, tests or lints Go, `go`, `golangci-lint` or a `make` target
   that runs them, starts with `. SCRIPTS/cache.sh && `, as in `. SCRIPTS/cache.sh && make lint`.
   It sets the Go build cache and the lint cache to the run's own for that one shell call, so
@@ -64,10 +68,11 @@ RETRY
    LANES, their `[decision]` and `[deviation]` lines in particular. A `[deviation]` that names
    a file outside the lane's `Where:` is where a conflict between two lanes comes from, and the
    two lines say what each meant.
-3. The root `CLAUDE.md` of CHECKOUT: the core rules, the fact-ownership table, the gates and
-   its Git section. Then the `CLAUDE.md` of each surface a conflict or a red check lands in,
+3. The project rules, the sections `Gates`, `Environment` and `Records`. Then the root
+   `CLAUDE.md` of CHECKOUT: its rules, where it says who owns a value, and its commit rules.
+   Then the `CLAUDE.md` of each surface a conflict or a red check lands in,
    and the skills `## Execution` lists for it, loaded with the Skill tool before your first
-   edit. Prose follows § Prose of the root `CLAUDE.md`.
+   edit. Prose follows the prose rules of the project's `CLAUDE.md`, where it states them.
 
 ### Merge
 
@@ -82,10 +87,10 @@ For each lane of LANES, in order:
    here. No merge commit is made: `base.sh` refuses a merge commit between BASE and `HEAD` on
    the next start, and the finalize regroups the range anyway.
 3. Resolve every conflict in the working tree:
-   - a generated file, `*.gen.go`, `*.pb.go`, `mocks.go`, `contracts/openapi/openapi.yaml`, the
-     console's `generated/`: take either side, the generators rewrite it below;
-   - the coverage lines a requirement carries, the lines `make -C docs requirements-status`
-     writes: take either side, the command rewrites them below;
+   - a generated file, the output of a generator the `Gates` section names: take either side,
+     the generators rewrite it below;
+   - lines a gate command writes into a hand-written file, such as the coverage lines a
+     record carries, by the `Gates` section: take either side, the command rewrites them below;
    - PLAN: the union of both sides' ticks; every `[x]` either side has is `[x]`, and nothing
      else in the file changes;
    - a hand-written file: read both tasks' `Result:` and `Decision:` and both lanes' journal
@@ -96,16 +101,17 @@ For each lane of LANES, in order:
      its conflicted state for the owner and nothing merged after it.
 4. Regenerate before the commit when the merge can have left a generated file stale: step 3
    took a side of a conflict, or an earlier lane of this merge also changed what a generator
-   reads, `contracts/`, a `// REQ-` marker or a requirements file. Then run `make generate`,
-   then `make -C docs requirements-status`: the pre-commit hooks build the backend and run the
-   docs check on what is staged. Otherwise skip both: the lane ran the generators of what it
+   reads, a contract or a file a gate command reads to write its lines. Then run the
+   generators and those commands, as the `Gates` section names them: the pre-commit hooks
+   build and check what is staged. Otherwise skip them: the lane ran the generators of what it
    changed, and its output is current. Then `git restore --staged .`, so
    the index holds nothing: `commit.sh` refuses an index that holds a path it is not given.
    Then commit the lane as one commit, naming every path `git status --porcelain` lists:
    `SCRIPTS/commit.sh "<message>" <paths...>`. The tree was clean before the squash, so every
    path listed is this lane's merge or its regeneration. A path the lane deleted is named like
    any other: it is gone from the tree and is staged as its removal. The message is
-   `type(scope): <the task's title>`, `type` and `scope` from the root `CLAUDE.md` Git section,
+   the task's title in the project's commit form, `type(scope): <the task's title>` unless
+   `SCRIPTS/../references/commit.md` finds another,
    with the lane's commit subjects as the body, one per line, not a `chore: integrate wave` message. Pass
    the message as one argument with real newlines inside the quotes, never through
    `git commit -F -`. End it with the attribution line your session's instructions give, when
@@ -127,26 +133,24 @@ run over what the review lanes touched.
 After the last lane, from CHECKOUT, in the foreground, never in the background, each to its
 end, reading the output. A check prints its exit code in the same call,
 `<command>; echo "exit=$?"`, and never through a pipe, whose exit code is the pipe's last
-command: a check is never run a second time to learn how it ended. A console that has never
-installed its packages here runs `npm ci` in `frontend/vartova/` first.
+command: a check is never run a second time to learn how it ended. A surface whose packages
+were never installed here gets what the `Environment` section asks a fresh checkout to install
+first. The commands are the ones the `Gates` section names:
 
-1. `make generate`, then `make generate-check`, when step 4 regenerated for any lane or a fix
+1. the generators, then their drift check, when step 4 regenerated for any lane or a fix
    of yours changed what a generator reads
-2. `make -C docs requirements-status`, then `make -C docs check`, on the same condition as
-   step 1; otherwise the docs hook already ran the check on every lane's commit, since each
-   stages PLAN
-3. `make build`
-4. `make lint`
-5. the tests where the lanes of the wave met. A surface, Go under `backend/`, the console or
-   `ml/`, is met when two or more lanes of LANES and REVIEW changed files in it, generated
+2. the docs check, with the steps the `Gates` section runs before it, on the same condition as
+   step 1; otherwise the docs hook, where the project has one, already ran the check on every
+   lane's commit, since each stages PLAN
+3. the build of the whole tree
+4. the lint of the whole tree
+5. the tests where the lanes of the wave met. A surface, a component with tests of its own, is
+   met when two or more lanes of LANES and REVIEW changed files in it, generated
    files included, when step 3 resolved a conflict in it, or when a fix of yours changed it.
    A surface only one lane changed is not met: that lane ran its tests on the code the merge
-   brought in unchanged. For each met surface, over the files `git diff --name-only TIP..HEAD`
-   lists in it:
-   - Go: `go test -race` from `backend/` over every package that holds a changed `.go` file,
-     plus the binary suite under `cmd/<binary>/test` of every service whose code changed;
-   - the console: `npx jest --findRelatedTests <the changed files>` from `frontend/vartova/`;
-   - `ml/`: `pytest` over the test modules of what changed.
+   brought in unchanged. For each met surface, its tests narrowed to the files
+   `git diff --name-only TIP..HEAD` lists in it: the packages, the modules or the specs that
+   hold or relate to a changed file, with the suites the `Gates` section ties to them.
 
    Log the surfaces that were not met in `- validation:`, each with the lane whose tests
    stand for it.
@@ -154,22 +158,23 @@ installed its packages here runs `npm ci` in `frontend/vartova/` first.
    inventory, run as written on this tree. A search that fails here passed in its lane, so the
    merge broke it: fix the tree, never the acceptance.
 
-`make build` and `make lint` run every component, whatever the wave touched: a lane breaks a
+The build and the lint run every component, whatever the wave touched: a lane breaks a
 neighbour it never opened, two lanes that each passed can fail together, and the next wave's
 lanes start from this tip. The tests run only where the lanes met: a lane's own tests passed
-on the code the merge brought in, and what only the tests of the whole tree catch, `make test`
-catches in the whole-tree check after the last wave.
+on the code the merge brought in, and what only the tests of the whole tree catch, the
+whole-tree check after the last wave catches.
 
 ### Fix
 
 - A red check is fixed, not handed back as an integrator usually does, and the list runs again from the check that went red, until it is
-  green. Fix the cause, never the check: `--no-verify`, `LEFTHOOK=0`, a skipped or deleted
-  test and an edit to a hook or a lint config so that it passes are forbidden.
+  green. Fix the cause, never the check: `--no-verify`, a variable that turns the hooks off
+  (`LEFTHOOK=0`, `HUSKY=0`), a skipped or deleted test and an edit to a hook or a lint config
+  so that it passes are forbidden.
 - A test that fails once and passes on a rerun with nothing changed is a flake: rerun it once,
   and when it passes, log it as `[decision]` with the test's name and go on. A test red twice
   is not a flake.
-- A failure the wave did not cause is not yours to fix: the root `CLAUDE.md`, Gates, says what
-  counts as one. Tell it by running only the red test at TIP, in a scratch worktree beside the
+- A failure the wave did not cause is not yours to fix: a check is not the wave's when the same
+  check, run alone, is red at TIP as well. Tell it by running only the red test at TIP, in a scratch worktree beside the
   run's own (`git worktree add --detach "$(dirname CHECKOUT)/SLUG-tip" TIP`, removed
   afterwards; not under `/private/tmp`, which Docker does not share, so a stand raised from
   there mounts nothing). Red there as well: leave it, log
@@ -184,12 +189,12 @@ catches in the whole-tree check after the last wave.
   what the owner reserves: change nothing for it and log
   `[owner] integration WAVE: <the question in plain words, the options and what each costs>`.
 - Everything else is the run's own: what the tree already does, you repeat; the fix is the
-  simplest one; a value goes into the artifact the fact-ownership table names as its owner.
+  simplest one; a value goes into the artifact the project's rules name as its owner.
 - PLAN gets no tick and no note from you beyond the union of the merge.
 
 Commit each fix with `SCRIPTS/commit.sh "<message>" <path>...`, naming every path you changed:
 `fix(<scope>): …` for code, `docs` for a document, `test` for a test; regenerated output goes
-in its own commit, `chore(contracts): regenerate …`. The staging and message rules are in
+in its own commit, `chore(<scope>): regenerate …`. The staging and message rules are in
 `SCRIPTS/../references/commit.md`: read it before your first commit.
 
 ### Prove

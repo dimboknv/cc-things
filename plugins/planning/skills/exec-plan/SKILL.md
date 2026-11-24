@@ -1,7 +1,7 @@
 ---
 name: exec-plan
 description: >
-  Use when a plan in `docs/plans/` is to be run, or a run of one continued: start the branch,
+  Use when a plan `/planning:make-plan` wrote is to be run, or a run of one continued: start the branch,
   run every task whose `After:` is met as a lane in its own worktree, integrate each wave
   through one subagent, check the whole tree once after the last wave, then review the branch,
   regroup its history and close the plan. A plan marked light runs with one executor, a
@@ -12,14 +12,14 @@ user-invocable: true
 disable-model-invocation: true
 ---
 
-# Run a VMS plan
+# Run a plan
 
 This skill takes a plan in the form of
 [`make-plan/references/form.md`](../make-plan/references/form.md) from its commit to a closed
 plan: a branch, the tasks in waves of parallel lanes, a journal, then the review rounds, the
-regroup of the history, the move to `completed/` and the owner's revdiff. The argument is the
-path of the plan under `docs/plans/`. A path that does not exist is the first stop, and a plan
-that already sits under `completed/` is such a path.
+regroup of the history, the move to the closed-plans directory and the owner's revdiff. The
+argument is the path of the plan in the plans directory. A path that does not exist is the
+first stop, and a plan that already sits in the closed-plans directory is such a path.
 
 A run may have a peer: a second agent in the split pane of the same agterm session, which
 reads the plan before the go, reads every wave after it is integrated while the next wave
@@ -40,6 +40,47 @@ whole tree run once, in the whole-tree check after the last wave. A plan with no
 runs every task in the first wave. A plan whose `## Execution` carries the Mode line
 `light` runs as "A light run" below says.
 
+## The project rules
+
+Load them once, at the start of Step 1, before the question about the peer:
+
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh
+```
+
+It prints the project's rules file, its path on the first line as `<!-- rules: <path> -->`, or
+nothing. The sections, and the default each takes when the file is absent or leaves it out, are
+[`../../references/rules.md`](../../references/rules.md). This skill reads:
+
+- `Plans`: the plans directory, the closed-plans directory a run moves the plan into, the file
+  name the slug comes from;
+- `Trunk`: the branch a run is cut from and its pull request lands on. This file calls it the
+  trunk;
+- `Gates`: the gate of each surface, the generators and their drift check, and the whole-tree
+  checks;
+- `Environment`: what a fresh worktree needs per surface, the caches, the stands a task's
+  `Needs:` names, how a stand is seen up and how the run takes one down;
+- `Records`: the records that bind a change and the ones that only explain it, what a lane does
+  with a decision record its task goes against, and the judgements only the owner makes;
+- `Consumers`: where the light run searches for the readers and writers of a shape;
+- `Review`: the revmux profiles of the branch rounds and the lens set of a light run, and the
+  rules a review holds the branch to.
+
+A heading the schema does not list is an addition to this skill's rules too. The project's
+`CLAUDE.md` files hold the rest a subagent reads: the conventions of each surface, the prose
+rules and the commit rules.
+
+## The plugin's files in a subagent's prompt
+
+The plugin root is `${CLAUDE_PLUGIN_ROOT}`, which Claude Code substitutes in this file only. A
+subagent, the peer and a script get no plugin variables, so every prompt under `references/`
+names the plugin's files through placeholders, and the lead substitutes absolute paths when it
+builds the prompt: `SCRIPTS` is `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` and `RULES`
+is `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh`, each expanded to the absolute path. The same holds
+for a command this file shows as `scripts/<name>`: it runs as
+`${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts/<name>`. A subagent runs `bash RULES` from its
+checkout and reads the sections its prompt names.
+
 Three operations are scripts under `scripts/`, and this file never spells out their git
 commands:
 
@@ -48,17 +89,18 @@ commands:
   pre-commit hook stages lands in the commit. A tracked path gone from the tree is staged as its
   removal, so a file is deleted with `rm` and moved with `mv`, never `git rm` or `git mv`: those
   take the path out of the index before the script can name it, and it fails;
-- `scripts/base.sh <slug>` computes the base commit of the run and records it;
+- `scripts/base.sh <slug> <trunk>` computes the base commit of the run and records it;
 - `scripts/progress.sh <slug> <line>` appends one timestamped line to the journal.
 
 Each exits non-zero with one line of reason on a refusal. A refusal is a stop: the line goes
 into the report, and nothing is tried around it.
 
-A fourth file there is sourced, not run. `. scripts/cache.sh` sets `GOCACHE` and
-`GOLANGCI_LINT_CACHE` to the run's own caches for the commands that follow in the same shell
-call, and the next call sources it again. Every command of a run that builds, tests or lints
-Go starts with it, `. scripts/cache.sh && make lint`, in a subagent and in this session alike.
-`commit.sh` sources it itself, for the pre-commit hooks.
+A fourth file there is sourced, not run, and it matters when the project builds Go.
+`. scripts/cache.sh` sets `GOCACHE` and `GOLANGCI_LINT_CACHE` to the run's own caches for the
+commands that follow in the same shell call, and the next call sources it again. Every command
+of a run that builds, tests or lints Go starts with it, `. scripts/cache.sh && make lint`, in a
+subagent and in this session alike. `commit.sh` sources it itself, for the pre-commit hooks. A
+project with no Go never runs a command it covers, and sourcing it there changes nothing.
 
 `scripts/audit.py <slug>` reads the run back. Claude Code keeps the transcript of every
 subagent, and the script lists the shell commands in them that break a rule of the prompts: Go
@@ -93,21 +135,24 @@ subagent to [`commit.md`](references/commit.md) for how a commit is made.
 ## Names and state
 
 - The slug is the plan's file name without its date and extension:
-  `docs/plans/20260930-make-plan-and-exec-plan.md` gives `make-plan-and-exec-plan`. The run's
+  `20260930-make-plan-and-exec-plan.md` gives `make-plan-and-exec-plan`. The run's
   branch is `<type>/<slug>`, `<type>` the commit type of the plan's Goal as the go confirms it,
   and its checkout is the worktree `.claude/worktrees/<slug>` in the main checkout. The trunk is never run on, and neither is a branch another checkout stands on.
 - The journal is `.exec-plan/<slug>/` in the main checkout, the first entry of
-  `git worktree list`, and git ignores it. It is not a run block committed in the plan. `progress.md` is the log, `base` the base commit.
-  The scripts find the main checkout themselves from whichever checkout they run in.
-- The run builds into its own caches, `.exec-plan/<slug>/cache/`. `go-build/` is one Go build
+  `git worktree list`. It is not a run block committed in the plan. `progress.md` is the log, `base` the base commit.
+  The scripts find the main checkout themselves from whichever checkout they run in. The
+  project's `.gitignore` lists `.exec-plan/` and `.claude/worktrees/`; where it does not, both
+  show as untracked in the main checkout, and nothing of the run stages them.
+- The run builds into its own caches, `.exec-plan/<slug>/cache/`, and the `Environment`
+  section may name more of them there. For Go: `go-build/` is one Go build
   cache for every checkout of the run, so a dependency is compiled once. `lint/<the checkout's
   directory name>/` is a golangci-lint cache per checkout: that cache keeps the absolute path
   of every file it read, and an entry of a worktree that is gone comes back as an issue no
   exclusion matches. Nobody else builds into them, so the run deletes them without asking who
-  is building: a cold build of the backend takes about half a minute and a cold lint under a
-  minute. The Go build cache goes after every wave, a lane's lint cache with the lane, and
-  the rest when the run ends. A stop leaves what is there for the continuation. Downloaded modules stay in the shared
-  `GOMODCACHE`.
+  is building: a cold build costs the next wave one compile, which is cheaper than a cache
+  that grows by a copy of the tree per lane. The Go build cache goes after every wave, a lane's
+  lint cache with the lane, and the rest when the run ends. A stop leaves what is there for the
+  continuation. Downloaded modules stay in the shared `GOMODCACHE`.
 - A lane is named after its task: the branch `<slug>-task-<N>`, the worktree
   `.claude/worktrees/<slug>-task-<N>` in the main checkout, and the subagent's name the same
   string, cut to its last 64 characters when it is longer: the Agent tool takes no longer name.
@@ -119,10 +164,13 @@ subagent to [`commit.md`](references/commit.md) for how a commit is made.
   once the executor has committed it there. A lane worktree that
   exists for an open task is a lane that stopped, and its branch holds what it committed.
 - `base` is also what says a run exists: Step 1 continues a run when the journal holds it and
-  starts one when it does not. A second `/exec-plan` on the same plan goes the way the first
+  starts one when it does not. A second `/planning:exec-plan` on the same plan goes the way the first
   went: the wave loop from the ready set, then the whole-tree check, then the review, which
   goes on from the rounds the task already holds and never starts over (Step 5). With every
   task already closed it goes straight to the whole-tree check.
+- The trunk is the branch the `Trunk` section names, resolved once in Step 1 and named
+  `<trunk>` below. With no `Trunk` section it is the branch `origin/HEAD` points at, else
+  `main`, else `master`.
 - Every tick and every `⚠️` is written by a lane into the copy of the plan in its worktree;
   the integrator brings the ticks of the integrated lanes into the run's checkout. The owner's
   answer to a stop goes where Step 4 says. Nobody else edits the plan, and the main checkout's
@@ -130,7 +178,7 @@ subagent to [`commit.md`](references/commit.md) for how a commit is made.
 - The run is one session. Between the go of Step 1 and a report it asks the owner nothing. It
   ends on the run report, or on the stop report of Step 4 when it meets an owner's judgement or
   an environment it cannot repair. A stop is an ordinary end of a session:
-  `/exec-plan <plan>` continues the run.
+  `/planning:exec-plan <plan>` continues the run.
 - No Agent call of the run names a `model`: every subagent runs on the model of this session.
 
 ## A light run
@@ -138,22 +186,23 @@ subagent to [`commit.md`](references/commit.md) for how a commit is made.
 A plan whose `## Execution` carries `- **Mode.** light — <reason>` is small enough for one
 executor, by the conditions [`form.md`](../make-plan/references/form.md) gives under Mode. The
 run skips what only parallel lanes and a large branch need, and keeps the branch, the gates
-of what the work touched, a review that carries the architecture check, the regroup and the
-owner's revdiff. Every step below holds except where this section changes it.
+of what the work touched, the review the `Review` section names for a light run, the regroup
+and the owner's revdiff. Every step below holds except where this section changes it.
 
 - **Step 1.** A light run has no peer, and the peer question is not asked. A peer the owner
   named after the path is not started, and the message that asks for the go says so. The anchors run as
   for any plan. For every shape `## Contracts and Data` names, the search of
-  [`make-plan`](../make-plan/SKILL.md) Step 2 for its readers and writers runs again; one the
-  section does not name is a false premise, and the plan goes back through `/make-plan <plan>`.
+  [`make-plan`](../make-plan/SKILL.md) Step 2 for its readers and writers runs again, over the
+  places the `Consumers` section names; one the
+  section does not name is a false premise, and the plan goes back through `/planning:make-plan <plan>`.
   No waves are printed: the tasks run one after another, in the order their `After:` lines
   allow. The message that asks
   for the go names the mode with the plan's reason, and says what the run skips: the lanes and
   the integrator, the whole-tree tests of components the branch does not touch, the
-  `comprehensive` round. It names the review the run will make instead, below. The go is the
+  rounds of a full run. It names the review the run will make instead, below. The go is the
   same one go; the light mode gets no go of its own.
-- **Step 2.** The same preflight, for the run's checkout: `npm ci` in its `frontend/vartova/`
-  when a task's `Where:` names `frontend/vartova/` or `contracts/`.
+- **Step 2.** The same preflight, for the run's checkout: what the `Environment` section asks a
+  fresh checkout to install for each surface a task's `Where:` names.
 - **Step 3.** No lane worktree and no integrator. Log `light run: one executor, <the plan's
   reason>`, then `wave N: started, tasks <list>`, `N` one past the highest `wave N` in the
   journal, the form the status page reads.
@@ -171,11 +220,12 @@ owner's revdiff. Every step below holds except where this section changes it.
   does not name, a behaviour the plan does not choose, or work one executor cannot close. The
   run does not switch to the full path by itself; the owner decides.
 - **The check.** The whole-tree step runs [`references/check.md`](references/check.md) with
-  `SCOPE` set to `light`: the generators, the docs check, the build and the lint of the whole
-  tree, and the tests only of the components the branch touched. Log
+  `SCOPE` set to `light`: the generators' drift check, the docs check, the build and the lint
+  of the whole tree, and the tests only of the components the branch touched. Log
   `whole tree: started, light`.
-- **Step 5.** At most two rounds, both on one agent: `--profile claude-only --lenses
-  bugs,impl,tests,conformance`, the lens set replacing the profile's roster. The first is
+- **Step 5.** At most two rounds, both on the light profile and lens set the `Review` section
+  names, by default `--profile claude-only --lenses bugs,impl,tests`, the lens set replacing
+  the profile's roster. The first is
   `NN-initial`. Clean: the minor pass when it holds minors, then Step 6. Not clean: the fixer,
   then one more round, `NN-after-fix`, whose `scope.md` names the critical and major findings
   of the first and the fix commits, and asks whether each fix closes its finding and what it
@@ -191,13 +241,13 @@ owner's revdiff. Every step below holds except where this section changes it.
   from the rounds the task holds: with one round, the fixer on its findings, then
   `NN-after-fix` on the lens set as above; with two, the fixer on the second round's findings
   and no round after it, and what it leaves goes into `open:` of the run report. Never a
-  `final` round and never a third.
+  round on the profiles of a full run and never a third.
 
 ## Step 1: where the run happens
 
 The only step with questions. After the question about the peer its order is the point: the premises are rechecked, the
 environment is checked and the go is given before a branch, a worktree or a base exists, so a
-plan that fails the recheck goes back to `/make-plan` with nothing to remove, and what the run
+plan that fails the recheck goes back to `/planning:make-plan` with nothing to remove, and what the run
 would stop on an hour later is said before it starts.
 
 **Continuation.** The run is continuing when `.exec-plan/<slug>/base` exists in the main
@@ -222,58 +272,59 @@ answers, each with what it costs:
 - Claude Code: a second session of the same account in the split pane. It reads the plan and
   every wave, and its turns are paid like this session's;
 - Codex: the same work by another model, which catches what two Claudes agree on by habit.
-  The hooks and the skills of this repository do not bind it, and the status page does not
+  The Claude Code hooks and skills of the project do not bind it, and the status page does not
   count its tokens.
 
 A continuation asks nothing: the journal says whether the run has a peer.
 
-**The plan is committed.** The plan file must exist at local `master`, and
-the commit `master` stands on, `git rev-parse master`, is kept in the session and in no file:
+**The plan is committed.** The plan file must exist at the local `<trunk>`, and
+the commit `<trunk>` stands on, `git rev-parse <trunk>`, is kept in the session and in no file:
 the plan is read at that commit, the anchors run in the main checkout as it stands there, and
-the branch is cut from that commit, so a `master` that moves while the owner reads changes
+the branch is cut from that commit, so a trunk that moves while the owner reads changes
 nothing the run stands on. When it does not, stop and
-say that the plan is not committed; the commit item of `/make-plan` is how it gets there.
+say that the plan is not committed; the commit item of `/planning:make-plan` is how it gets there.
 
-**Behind origin.** `git fetch origin`, then count how far local `master` is
-behind `origin/master`. Behind by anything: say by how many commits, and the go below is the
-answer to whether the run goes on with local `master` as it is. The branch is cut from the
-recorded commit, with the plan's commit on it; the freshness against `origin` is `/ship`'s
-job.
+**Behind origin.** When the checkout has a remote `origin`: `git fetch origin`, then count how
+far the local `<trunk>` is behind `origin/<trunk>`. Behind by anything: say by how many
+commits, and the go below is the answer to whether the run goes on with the local trunk as it
+is. The branch is cut from the recorded commit, with the plan's commit on it; the freshness
+against `origin` is the pull request's job, after the run.
 
-**Premises, Owner Sign-off, waves, go.** Read the plan at the recorded `master` commit, with
+**Premises, Owner Sign-off, waves, go.** Read the plan at the recorded trunk commit, with
 the anchors run in the main checkout. Run every anchor in `## Premises` the way the refresh mode of
 [`make-plan`](../make-plan/SKILL.md) does, and report each as in place, moved, or false. A
 moved anchor is reported and the run goes on. A false premise is a fork for the owner and
 stops the start with no branch, no worktree and no journal made: the plan goes back through
-`/make-plan <plan>`, and `/exec-plan <plan>` starts again from its new commit. Then show
+`/planning:make-plan <plan>`, and `/planning:exec-plan <plan>` starts again from its new commit. Then show
 `## Owner Sign-off` as it is written. Every line there is settled; the run does not reopen it,
 and a subagent that meets an owner's judgement not written there stops the run. Then print the
 waves: read every task's `After:` and `Needs:`, and list wave by wave which tasks run together,
 each with the reason its `After:` gives. An `After:` that names a title no task carries, or a
-cycle, is a stop: the plan goes back through `/make-plan <plan>`.
+cycle, is a stop: the plan goes back through `/planning:make-plan <plan>`.
 
 **The environment, before the go.** Everything that can be checked without a worktree is
 checked here, and what is missing is said in the message that asks for the go:
 
 - what `## Execution` of the plan names beyond the tree: a binary on `PATH`, credentials, a
-  camera's address, fetched weights. Check each the way Execution says. An item the host does
+  device's address, fetched weights. Check each the way Execution says. An item the host does
   not have is a stop before the go: a task cannot be gated without it;
+- what the `Environment` section names for the surfaces the tasks' `Where:` lines touch: a
+  toolchain, a service, a stand. Checked the same way, with the same stop;
 - the review tools, `revmux`, `claude` and `codex` on `PATH`. No `revmux`: stop, with the
   install command (`brew install umputun/apps/revmux`). No `claude`: stop, nothing here runs
   without it. No `codex`: not a stop. Say so in the message that asks for the go: the review
-  rounds then run on the profile `claude-only` instead of `comprehensive` and `final`;
-- a stand a task's `Needs:` names: `docker compose ls` says which stack is up. Every stack out
-  of the compose file shares the same ports and device subnet, so a stack another run raised
-  is where this run would stop. Say which stack is up; the owner's go decides whether the run
-  starts beside it;
-- disk: the free space of the checkout's volume (`df -k`) and what Docker holds
-  (`docker system df`). A lane is one more copy of the checkout, plus the console's packages
-  when its `Where:` names `frontend/vartova/` or `contracts/`. Free space below two copies per
-  lane of the widest wave is where the run cleans before it stops: what can be rebuilt and
-  nobody else holds. The caches a stopped run of this plan left,
+  rounds then run on the profile `claude-only` instead of the profiles of Step 5;
+- a stand a task's `Needs:` names: whether it is up, checked the way the `Environment` section
+  says. A stand another run raised, or another stand on the same ports, is where this run would
+  stop. Say which stand is up; the owner's go decides whether the run starts beside it;
+- disk: the free space of the checkout's volume (`df -k`) and, on a host that runs Docker,
+  what Docker holds (`docker system df`). A lane is one more copy of the checkout, plus the
+  packages the `Environment` section installs for the surfaces its `Where:` names. Free space
+  below two copies per lane of the widest wave is where the run cleans before it stops: what
+  can be rebuilt and nobody else holds. The caches a stopped run of this plan left,
   `rm -rf .exec-plan/<slug>/cache`, then `docker image prune -f` and
-  `docker builder prune -f`. Never the Go or lint cache the host shares, an image by name, a
-  named volume or a stack: those are other sessions' work. Measure again. Still below: a stop
+  `docker builder prune -f`. Never a build cache the host shares, an image by name, a
+  named volume or a stand: those are other sessions' work. Measure again. Still below: a stop
   before the go, with the numbers;
 - a barrier `## Execution` names: an open plan whose merge this one waits for.
 
@@ -285,23 +336,23 @@ Then wait for the owner's go; it confirms the schedule, the branch and what the 
 check said.
 After the go the run asks nothing until a report.
 
-**Worktree.** On the go, from the main checkout, `<sha>` being the recorded `master` commit:
+**Worktree.** On the go, from the main checkout, `<sha>` being the recorded trunk commit:
 
 ```bash
 git worktree add .claude/worktrees/<slug> -b <type>/<slug> <sha>
 ```
 
-The branch starts from the tree the premises were checked on, wherever `master` stands by
+The branch starts from the tree the premises were checked on, wherever the trunk stands by
 then. A branch `<type>/<slug>` that already exists without a worktree gets the worktree without `-b`
 when `git rev-parse <type>/<slug>` is `<sha>`; on any other commit the start is a stop: the branch
 was made outside the skill and holds commits the premises never saw, and the owner deletes or
 renames it. A worktree already at `.claude/worktrees/<slug>` is taken by the same rule, its
 `HEAD` at `<sha>` or the same stop. The main checkout is not touched beyond that: no merge
-into `master`, no checkout, nothing that moves what the other sessions there stand on.
-`npm ci` and the rest of what a fresh worktree needs are Step 2.
+into the trunk, no checkout, nothing that moves what the other sessions there stand on.
+What a fresh worktree needs is Step 2.
 
-**Base.** Run `scripts/base.sh <slug>` from the run's checkout. It records
-`.exec-plan/<slug>/base`, the `master` commit the branch was cut from. It refuses a merge
+**Base.** Run `scripts/base.sh <slug> <trunk>` from the run's checkout. It records
+`.exec-plan/<slug>/base`, the trunk commit the branch was cut from. It refuses a merge
 commit between the base and `HEAD`, and a recorded base the tree no longer matches: a branch
 rebased or merged by hand since the run started. The review range, the regroup and the revdiff
 all start at this commit, so the refusal is the stop and its line is the reason.
@@ -314,13 +365,14 @@ Then log it with `scripts/progress.sh <slug> "run started: <plan>, <worktree pat
 Once per run, before the first wave: what only a worktree can be given. Its result goes into
 the prompt of every lane and of every integrator as the `PREFLIGHT` block.
 
-- **The worktree's own environment**: `npm ci` in a fresh worktree where `## Execution` asks
-  for it, and the files git ignores that a gate needs, model weights first of all, linked from
+- **The worktree's own environment**: what the `Environment` section asks a fresh checkout to
+  install for each surface a task's `Where:` names, and what `## Execution` asks for beyond it,
+  and the files git ignores that a gate needs, model weights first of all, linked from
   the main checkout the way Execution says. An item that cannot be met is a stop before the
   first wave.
-- **The block.** Three to seven lines: what is present, what was done and where (`npm ci` in
-  which path), which profiles the review rounds will use, what Execution named and how it
-  was met, which stack is up and whose it is when
+- **The block.** Three to seven lines: what is present, what was done and where (which
+  install in which path), which profiles the review rounds will use, what Execution named and
+  how it was met, which stand is up and whose it is when
   the owner said so, and the free space the check of Step 1 found.
 
 ## Step 3: the wave loop
@@ -347,11 +399,11 @@ Repeat until no task section holds an open `[ ]`:
    its commits, and before its lane runs, the run's branch is merged into it from inside that
    worktree, `git merge <run branch>`, so the lane sees the waves integrated since it stopped
    and the plan copy with the owner's answer. A conflict in that merge is a stop with the
-   report of Step 4. A task whose `Where:` names `frontend/vartova/` or `contracts/` gets
-   `npm ci` in its worktree's `frontend/vartova/` before the lane starts: `make generate`
-   regenerates the console's client from the contract, and without the console's packages it
-   stops at `openapi-typescript`. The ignored files of Step 2 are linked into the lane the same
-   way. A lane that continues keeps both.
+   report of Step 4. A task gets in its worktree, before the lane starts, what the
+   `Environment` section asks a fresh checkout to install for each surface its `Where:` names,
+   a surface a generator writes from what the task changes included: a generator that runs
+   without the packages of the surface it writes stops there. The ignored files of Step 2 are
+   linked into the lane the same way. A lane that continues keeps both.
 4. **Launch the lanes**, all of them in one message, each a subagent (the Agent tool,
    `general-purpose`, `name` the lane's name, in the background) with the prompt of
    [`references/task.md`](references/task.md), every placeholder substituted; `WAVE` lists every
@@ -391,9 +443,9 @@ Repeat until no task section holds an open `[ ]`:
      `git branch -D <slug>-task-<N>` from the main checkout, for the integrated lanes only,
      then the lint cache of each, `rm -rf .exec-plan/<slug>/cache/lint/<slug>-task-<N>`, and
      the Go build cache of the run, `rm -rf .exec-plan/<slug>/cache/go-build`. Go compiles the
-     module's packages again under the path of every worktree, about a third of a gigabyte a
+     module's packages again under the path of every worktree, a copy of the compiled tree per
      lane, and nothing reads those entries once the lane is gone. No lane builds at this
-     moment, and the next wave starts with a cold build, about half a minute. The lint cache
+     moment, and the next wave starts with a cold build. The lint cache
      of the run's checkout stays. Then, when no lane of the wave stopped, the next pass of
      the loop; when one did, the report of Step 4, after the integration and not before it.
      The review and the finalize do not run after such a stop.
@@ -405,21 +457,22 @@ Repeat until no task section holds an open `[ ]`:
 Nothing is asked between waves. A lane that cannot close an item leaves it open with its
 reason, and the owner reads the reason in the report, not a question mid-run.
 
-**The whole tree.** A lane checks only what it touched: `go build ./...` and the tests of the
-packages it changed, the related console specs, the generators and the docs check when it
+**The whole tree.** A lane checks only what it touched: the build of the surfaces it changed
+and the tests of the packages it changed, the generators and the docs check when it
 moved them. An integrator builds and lints the whole tree and runs the tests only of a surface
 two lanes of its wave changed, since a surface one lane changed was tested by that lane. Once every task is closed, the whole tree is checked once, before the first review
 round, by an executor like the lanes' and not by the finalize: what goes red there is fixed by
 the run, and the fix is reviewed with the rest of the branch. Spawn one subagent (the Agent
 tool, `general-purpose`) with the prompt of [`references/check.md`](references/check.md), every
-placeholder substituted, and wait for it. It runs `make generate-check`, the docs check,
-`make build`, `make lint` and `make test` from the root, every component whatever the branch
-touched, and fixes and commits until they are green. Read what came back:
+placeholder substituted, and wait for it. It runs the whole-tree checks the `Gates` section
+names, the generators' drift check, the docs check, the build, the lint and the tests, every
+component whatever the branch touched, and fixes and commits until they are green. Read what
+came back:
 
 - `whole tree: green` in the journal and no `[owner]` or `[blocker]` line: say so in one line
   and go to the review. A `[deviation] … red at the base as well` line beside it is a failure
-  the branch did not cause (root `CLAUDE.md`, Gates): the run goes on, and the line goes into
-  `open:` of the run report.
+  the branch did not cause: the same check, run alone, is red at the base. The run goes on,
+  and the line goes into `open:` of the run report.
 - an `[owner]` or `[blocker]` line: stop with the report of Step 4. The review and the finalize
   do not run.
 - neither: one retry, a fresh subagent with the errors of the first attempt in `RETRY`. Still
@@ -443,38 +496,43 @@ logged:     <every [decision] and [deviation] line, verbatim>
 branch:     <branch> @ <sha>, base <sha>, <worktree path>
 next:       <what the owner decides | for a [blocker] environment line, what on the host to
             repair>; an answer that changes the plan goes into the copy in
-            the run's checkout, <checkout>/docs/plans/<file>, committed there through
-            `commit.sh`; then `/exec-plan <plan>` continues: the stopped lanes are brought
+            the run's checkout, <checkout>/<the plan's path>, committed there through
+            `commit.sh`; then `/planning:exec-plan <plan>` continues: the stopped lanes are brought
             onto the run's branch and rerun, and the loop goes on from the ready set, or from
             the whole-tree check when every task is closed
 ```
 
 The plan the run reads is the copy in the run's checkout, and that is where an answer to an
 `[owner]` or a `[blocker]` line that changes the plan lands: an edit to
-`<checkout>/docs/plans/<file>`, committed through `commit.sh`, then the run continues. A plan
-refreshed on `master` through `/make-plan <plan>` instead never reaches the branch, because
-`master` is not merged into it: for that, remove the worktree, the lane worktrees, the branches
+`<checkout>/<the plan's path>`, committed through `commit.sh`, then the run continues. A plan
+refreshed on the trunk through `/planning:make-plan <plan>` instead never reaches the branch, because
+the trunk is not merged into it: for that, remove the worktree, the lane worktrees, the branches
 and the journal `.exec-plan/<slug>/`, and start the run again from the refreshed commit.
 
 ## Step 5: review rounds
 
 Every task is closed. The branch from `base` now goes through revmux rounds until one is
-clean or three have run: `comprehensive` first, `final` on the fixes of each round after it,
-and `claude-only` for every round when Step 1 found no `codex`.
+clean or three have run. The `Review` section names two profiles: the first round's, by
+default `comprehensive`, and the profile of every round after it on the fixes, by default
+`final`. Every round runs on `claude-only` when Step 1 found no `codex`. This file calls
+them the first-round profile and the last-round profile.
 The three are counted over the whole run, by the round directories under the task in the main
-checkout's `.revmux/tasks/<slug>/`, not per session. `comprehensive` runs once on a branch: it
-is the round with both models and every lens, and a second one reads a diff that was already
-read. Load the `revmux:revmux` skill and follow it, with what a run changes:
+checkout's `.revmux/tasks/<slug>/`, not per session. The first-round profile runs once on a
+branch: it is the round with both models and every lens, and a second one reads a diff that
+was already read. Load the `revmux:revmux` skill and follow it, with what a run changes:
 
 - The subject is the branch: `git diff <base>...HEAD` in the run's checkout, the whole range in
   every round. The lanes are already in it, and no lane worktree exists by now. `scope.md`
   carries that range, says to read the plan at its path in full before the diff, and on a round
   after the first names the fix commits since the previous round. `goal.md` is the plan's Goal
   in two lines and the criteria: every task's `Result:` holds, nothing under `## Out of Scope`
-  moved, the root `CLAUDE.md` rules hold. On a `final` round it is the merge gate, as the revmux
+  moved, the rules of the project hold. On a round of the last-round profile it is the merge
+  gate, as the revmux
   skill asks of the last round before a merge: the round answers whether anything in the branch
   should not ship, and finding nothing is a valid answer. `profile.md` names the root
-  `CLAUDE.md`, the `CLAUDE.md` of each surface the branch touches and the plan's `## Decisions`
+  `CLAUDE.md`, the `CLAUDE.md` of each surface the branch touches, the project's rules file
+  when it has one, with the rules its `Review` section holds a branch to, and the plan's
+  `## Decisions`
   as where the rules live, and says a Decision is settled: that the branch does what a Decision
   says is not a finding, and that a Decision is wrong is an open question.
 - The task id is the slug, whatever the branch is called. The plan's own review ran under
@@ -494,8 +552,8 @@ read. Load the `revmux:revmux` skill and follow it, with what a run changes:
 **A continuation.** When the task already holds a round, the review does not start over. The
 last round stopped on an `[owner]` line, and the plan copy now holds the answer, or on a
 `[blocker] environment` line, and the owner has repaired the host: give the
-fixer the findings of that round again, `findings.json` in its directory, then run `final` on
-the commits it makes. With three rounds already under the task, the fixer runs and no round
+fixer the findings of that round again, `findings.json` in its directory, then run the
+last-round profile on the commits it makes. With three rounds already under the task, the fixer runs and no round
 follows.
 
 Read the result in this order; the first line that applies decides:
@@ -528,7 +586,7 @@ back, the journal lines it appended and its report:
 
 - an `[owner]` or `[blocker]` line: stop with the report of Step 4, the same stop as after a
   wave. The finalize and the close do not run, and the branch waits on the owner's answer;
-  `/exec-plan <plan>` after it continues the review as "A continuation" above says.
+  `/planning:exec-plan <plan>` after it continues the review as "A continuation" above says.
 - no commit, because every finding was noise or an answered question: no round follows. A
   round on an unchanged diff reads the same diff again. The dropped findings go into the run
   report with their reasons, and Step 6 runs.
@@ -542,21 +600,22 @@ back, the journal lines it appended and its report:
 One subagent (the Agent tool, `general-purpose`) with the prompt of
 [`references/finalize.md`](references/finalize.md), every placeholder substituted, and wait
 for it. It regroups the history from `base` behind a `backup/` branch and proves the tree did
-not move, moves the plan into `docs/plans/completed/` and reports. It runs no gate, not the usual last check on the final tip: the whole
+not move, moves the plan into the closed-plans directory of the `Plans` section and reports. It runs no gate, not the usual last check on the final tip: the whole
 tree was checked before the review, and the regroup leaves the tree byte for byte as it was.
 This session does none of that itself. A `[blocker]` line from it, or a diff against the
 backup that is not empty: stop with the report of Step 4. The history stays as the subagent
-left it, the backup branch holds the tip, and the plan stays under `docs/plans/`.
+left it, the backup branch holds the tip, and the plan stays in the plans directory.
 
 **Clean up after the run.** Before the report, from the main checkout, remove what the run
 left on the disk and nothing it did not make:
 
-- a stack the run's lanes raised that was down when Step 1 looked: `make -C deploy e2e-down`
-  or `e2e-fed-down`, which remove its volumes. A stack that was up before the run is another
-  session's and stays. `compose-down` is never run here: it takes down every stack out of the
-  compose file, the stand of another checkout included;
+- a stand the run's lanes raised that was down when Step 1 looked, taken down the way the
+  `Environment` section says, its volumes with it. A stand that was up before the run is
+  another session's and stays. A command that takes down every stand on the host, the stand
+  of another checkout included, is never run here;
 - the scratch worktrees of the base and tip checks, when one is left;
-- `docker image prune -f`: every rebuild of the stand's images left the old layers dangling;
+- on a host that runs Docker, `docker image prune -f`: every rebuild of a stand's images left
+  the old layers dangling;
 - the run's caches, `rm -rf .exec-plan/<slug>/cache`.
 
 The report's `whole tree:` line is followed by what was freed, `df -k` before and after.
@@ -573,14 +632,14 @@ tasks:     <n>, all closed, in <m> waves
 review:    <n> rounds (<run>: <profile>, ...); <n> fixed, <n> dropped, <n> open
 history:   <n> commits → <m> commits, backup/<slug>-<stamp>
 whole tree: green, <n> fixes | <the checks and their result>
-plan:      docs/plans/completed/<file>
+plan:      <the closed-plans directory>/<file>
 audit:     <n> findings in <n> commands of <n> agents | no transcript found
 logged:    <every [decision] and [deviation] line, verbatim>
 open:      <every finding not fixed: a minor left, a finding dropped and why, an open
             question and where the plan answers it, a finding of the third round; every check
-            red at the base as well; every ADR a lane or a fixer set to `Proposed`, waiting
-            for the owner to accept it>
-next:      revdiff | `/ship <branch>`, revdiff is not installed
+            red at the base as well; every record a lane or a fixer left waiting for the
+            owner's acceptance, as the `Records` section says>
+next:      revdiff | the pull request of <branch>, revdiff is not installed
 ```
 
 **revdiff.** The owner is back, and from here questions are allowed again. When `revdiff` is
@@ -592,12 +651,12 @@ other branches write there too. Every annotation gets one line in the reply,
 question is answered and changes nothing. A change is made by this session, gated, and
 committed through `commit.sh` on top of the regrouped history, as `fix(<scope>): ...` or
 `docs(<scope>): ...`. An annotation that is unclear is quoted back with two readings. None is
-skipped, and none becomes a backlog item, a plan or an ADR unless it says so. No annotations:
-say so and name the history file that was read. Reopen revdiff on the fixes only when the
-owner asks. A gate run here builds the run's caches again: remove them once more after the
-last fix. End on one line: the count of annotations, how many were fixed, answered and
-disagreed with, and that `/ship <branch>` is next. Without `revdiff`, the run report is the
-end and `/ship <branch>` is the owner's next step.
+skipped, and none becomes a backlog item, a plan or a decision record unless it says so. No
+annotations: say so and name the history file that was read. Reopen revdiff on the fixes only
+when the owner asks. A gate run here builds the run's caches again: remove them once more
+after the last fix. End on one line: the count of annotations, how many were fixed, answered
+and disagreed with, and that the pull request of `<branch>` onto the trunk is next. Without
+`revdiff`, the run report is the end and the pull request is the owner's next step.
 
 ## Common mistakes
 
@@ -605,15 +664,15 @@ end and `/ship <branch>` is the owner's next step.
 |---|---|
 | Cut the worktree before the premises were rechecked | Premises, Owner Sign-off, waves, go, then the cut; a false premise leaves nothing to remove |
 | Took a branch `<type>/<slug>` or a worktree for a continuation | `.exec-plan/<slug>/base` says a run exists; without it, the question of Step 1 |
-| Cut the worktree from `master` as it stood after the go, or attached a branch `<type>/<slug>` as it stood | From the `master` commit the premises were checked on; a branch `<type>/<slug>` on any other commit is a stop |
-| Sent a mid-run answer through `/make-plan` on `master` | The copy in the run's checkout, through `commit.sh`; a refresh on `master` restarts the run |
-| Cut the branch from `origin/master` | From the recorded local `master` commit, plan commit included; `/ship` brings origin |
-| Merged or fast-forwarded `master` in the main checkout | Never; other sessions stand there. Count, ask, then cut |
+| Cut the worktree from the trunk as it stood after the go, or attached a branch `<type>/<slug>` as it stood | From the trunk commit the premises were checked on; a branch `<type>/<slug>` on any other commit is a stop |
+| Sent a mid-run answer through `/planning:make-plan` on the trunk | The copy in the run's checkout, through `commit.sh`; a refresh on the trunk restarts the run |
+| Cut the branch from `origin/<trunk>` | From the recorded local trunk commit, plan commit included; the pull request brings origin |
+| Merged or fast-forwarded the trunk in the main checkout | Never; other sessions stand there. Count, ask, then cut |
 | Wrote git commands for the three scripted operations | `commit.sh`, `base.sh`, `progress.sh` |
 | Ran `git rm` or `git mv` before `commit.sh` | `rm` or `mv`; the script stages a path gone from the tree as its removal |
 | Ran the tasks one after another because the plan has `After:` lines | Every task whose `After:` is met runs in the same wave |
 | Took the plan's file order as the order of execution | The ready set; file order only breaks a tie for `Needs:` |
-| Cut a lane from `master` or from the previous wave's tip | From the run branch's `HEAD` at the start of the wave |
+| Cut a lane from the trunk or from the previous wave's tip | From the run branch's `HEAD` at the start of the wave |
 | Cut a second worktree for a stopped lane | Its worktree exists; merge the run's branch into it and rerun |
 | Launched the lanes one per message, waiting for each | All lanes of a wave in one message, then wait for all |
 | Resumed an environment-stopped lane while its siblings still ran | After every other lane of the wave has ended, once |
@@ -629,22 +688,22 @@ end and `/ship <branch>` is the owner's next step.
 | Removed a stopped lane's worktree at the end of the wave | Only integrated lanes are removed |
 | Ticked the main checkout's plan from a worktree | Only the copy in a lane's worktree, brought to the run's checkout by the integrator |
 | Wrote the report to a file | The report is in chat; the journal is the file |
-| Ran `make test` in every lane or integration, or not at all | A lane tests what it touched, an integrator what its wave touched; `make test` runs once, in the whole-tree check after the last wave |
+| Ran the whole-tree tests in every lane or integration, or not at all | A lane tests what it touched, an integrator what its wave touched; the whole-tree tests run once, in the whole-tree check after the last wave |
 | Left a red whole tree to the finalize | The check's own subagent fixes it; the finalize runs no gate |
 | Took a failed or degraded round as clean | Exit code, then `sources.degraded`, then the findings; a partial round stops the run |
 | Ran revmux from the worktree | From the main checkout with `--workdir`; the project layer is read from the process directory |
 | Fixed a finding in this session | The fixer subagent, one per round; it sorts before it fixes |
 | Ran a fourth round, or one on an unchanged diff | Three at most over the whole run; what the third leaves, and what a fixer dropped, goes to the report |
-| Ran `comprehensive` again after the owner answered a finding | The fixer on the last round's findings, then `final` on its commits |
+| Ran the first-round profile again after the owner answered a finding | The fixer on the last round's findings, then the last-round profile on its commits |
 | Passed a `model` to a subagent | None; every subagent runs on the session's model |
-| Ran `compose-down`, removed an image by name or a named volume to free space | Only what the run made: its e2e stack, dangling layers, its own caches |
+| Took down every stand on the host, removed an image by name or a named volume to free space | Only what the run made: the stand its lanes raised, dangling layers, its own caches |
 | Ran `go clean -cache` or `golangci-lint cache clean` | Those clear the caches every session on the host shares; the run removes `.exec-plan/<slug>/cache` |
 | Built, tested or linted Go without `. scripts/cache.sh` in the same shell call | The command writes into the shared caches, and the lint leaves there the paths of a worktree that will be gone |
 | Went to the finalize from a clean round with simple minors left open | The minor pass: one fixer run over the minors, then Step 6 with no round after it |
 | Ran another round on the fixes of the minor pass | None; minors arrive at about three a round, and a loop on them does not end |
 | Regrouped without the backup, or with `--soft` | `backup/` at the tip, `git reset <base>`, groups through `commit.sh`, an empty diff |
-| Merged `master` into the branch at finalize | Never here; `/ship` brings the branch onto `master` |
+| Merged the trunk into the branch at finalize | Never here; the pull request brings the branch onto the trunk |
 | Read the newest revdiff history file | By the refs of this run; other reviews write there too |
 | Opened revdiff on the last commit | The whole branch, `<base>...HEAD` |
-| Cut lanes or ran `comprehensive` for a plan whose Execution says light | One executor in the run's checkout, the light check, two rounds at most on the lens set |
+| Cut lanes or ran the first-round profile for a plan whose Execution says light | One executor in the run's checkout, the light check, two rounds at most on the lens set |
 | Moved a light run onto the full path when the executor outgrew it | Stop with the report of Step 4; the owner decides |

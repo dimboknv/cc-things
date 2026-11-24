@@ -52,6 +52,7 @@ WAVE_DONE = re.compile(r"^wave (\d+): integrated, (.*)$")
 # a lane's report, not the line it logs before a long command
 LANE_DONE = re.compile(r"^task (\d+): (?!running .*, about \S+ min$)")
 RUN_START = re.compile(r"^run started: (\S+), ")
+PLAN_CLOSED = re.compile(r"^finalize: plan closed, (\S+)")
 # the end of a whole-tree check; its other lines, the one before a long command among them, are not
 CHECK_DONE = re.compile(r"^whole tree: ((?:green|red)\b.*)$")
 
@@ -123,16 +124,15 @@ def read_tasks(plan: Path) -> dict[int, dict]:
     return tasks
 
 
-def find_plan(main: Path, slug: str, rel: str) -> Path | None:
-    """find_plan follows the plan from the run's checkout to docs/plans/completed, where the close moves it."""
-    name = Path(rel).name
+def find_plan(main: Path, slug: str, rel: str, closed: str) -> Path | None:
+    """find_plan follows the plan from the run's checkout to the path the close moved it to, which
+    the finalize's journal line names."""
     run = main / ".claude" / "worktrees" / slug
-    for path in (
-        run / rel,
-        run / "docs/plans/completed" / name,
-        main / "docs/plans/completed" / name,
-        main / rel,
-    ):
+    candidates = [run / rel]
+    if closed:
+        candidates += [run / closed, main / closed]
+    candidates.append(main / rel)
+    for path in candidates:
         if path.is_file():
             return path
     return None
@@ -523,7 +523,10 @@ def collect(main: Path, slug: str, now: datetime) -> dict:
     plan_rel = next(
         (m.group(1) for _, text in journal if (m := RUN_START.match(text))), ""
     )
-    plan = find_plan(main, slug, plan_rel) if plan_rel else None
+    plan_closed = next(
+        (m.group(1) for _, text in journal if (m := PLAN_CLOSED.match(text))), ""
+    )
+    plan = find_plan(main, slug, plan_rel, plan_closed) if plan_rel else None
     tasks = read_tasks(plan) if plan else {}
 
     waves: dict[int, dict] = {}

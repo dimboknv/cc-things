@@ -22,8 +22,8 @@ A plain run also lets every lane decide alone what the plan leaves open, and no 
 what another decided. The peer reads those decisions and keeps the notes the later lanes get.
 
 Whoever the peer is, it fixes nothing. A subagent of the lead does, in a lane of its own:
-`mailbox-chat` lets only the lead's side edit the worktree, and the hooks and the skills of
-this repository do not bind a Codex.
+`mailbox-chat` lets only the lead's side edit the worktree, and the Claude Code hooks and
+skills of the project do not bind a Codex.
 
 ## State
 
@@ -44,11 +44,13 @@ A review lane is the branch `<slug>-review-<N>` and the worktree
 ## Start: the council before the go
 
 The owner picked the peer in the request or in the first question of Step 1: Claude Code or
-Codex. The launcher is the one `brainstorm` keeps, given this skill's brief:
+Codex. The launcher is the one `brainstorm` keeps, given this skill's brief. `<plugin root>`
+is `${CLAUDE_PLUGIN_ROOT}`, which SKILL.md names and the lead writes out as an absolute path:
+this file is read with the Read tool, which substitutes nothing.
 
 ```bash
-.claude/skills/brainstorm/scripts/peer.sh .claude/skills/exec-plan/references/peer.md claude
-.claude/skills/brainstorm/scripts/peer.sh .claude/skills/exec-plan/references/peer.md codex
+<plugin root>/skills/brainstorm/scripts/peer.sh <plugin root>/skills/exec-plan/references/peer.md claude
+<plugin root>/skills/brainstorm/scripts/peer.sh <plugin root>/skills/exec-plan/references/peer.md codex
 ```
 
 Either agent runs on the model its own configuration picks. A model id after `claude` is
@@ -70,7 +72,7 @@ asks for the go:
 4. Sort what is kept. What only the owner decides goes into the message that asks for the go,
    each as a question with its options and what each costs: this is the one moment of the run
    when the owner answers. An answer that changes the plan sends it back through
-   `/make-plan <plan>`, as a false premise does. The rest stays in the scratchpad until the go.
+   `/planning:make-plan <plan>`, as a false premise does. The rest stays in the scratchpad until the go.
 
 The go covers the peer and every exchange with it. After `base.sh`, write `notes.md`: the
 notes kept in the scratchpad, and every answer the owner gave with the go.
@@ -105,10 +107,9 @@ fixer builds from it while the next wave is cut, and the cache then waits for th
 **When the peer's reply arrives.** `wave-<N>.json` with no finding: log
 `review wave N: no findings`. Otherwise cut a review lane from the run branch's `HEAD` as it
 stands now, give it what Step 3 gives a task lane whose `Where:` names the areas the findings
-sit in, the console's packages and the linked ignored files, and launch one subagent in the
-background (the Agent tool, `general-purpose`) with the prompt of
-[`fixer.md`](fixer.md): `CHECKOUT`, `BRANCH`, `PLAN` and `SCRIPTS`
-are the review lane's, `BASE` the run's base, `ROUND` is `wave N, peer`, `FINDINGS` the path
+sit in, the installs of the `Environment` section and the linked ignored files, and launch
+one subagent in the background (the Agent tool, `general-purpose`) with the prompt of
+[`fixer.md`](fixer.md): `CHECKOUT`, `BRANCH` and `PLAN` are the review lane's, `BASE` the run's base, `ROUND` is `wave N, peer`, `FINDINGS` the path
 of `wave-<N>.json`. A reply that carries `stop:` is logged as
 `[owner] review wave N: the peer asks to stop, not verified: <the peer's words>`: this
 session reads no code, so the claim reaches the owner as the peer's. A reply that arrives
@@ -136,7 +137,7 @@ ended:
   naming them, `WAVE` set to `<last wave> review` and `TIP` to the run branch's `HEAD` after
   the check. Its `wave <last wave> review: integrated` line sends nothing to the peer.
 
-Then Step 5 and Step 6, as written. The first round is `comprehensive` whatever
+Then Step 5 and Step 6, as written. The first round runs on the first-round profile whatever
 the peer found: it is the measure of the trial.
 
 ## A continuation
@@ -186,5 +187,5 @@ two or three majors to the first round.
 | Started a fixer for a reply that came after a stop report | The continuation takes it |
 | Sent the review-only integration to the peer as a wave | Only a wave of tasks is sent |
 | Resent a message the mailbox refused | Log the deviation and go on as a plain run |
-| Skipped the first `comprehensive` round because the peer read every wave | It runs; its count of majors is the measure |
+| Skipped the first round on the first-round profile because the peer read every wave | It runs; its count of majors is the measure |
 | Continued a run that has `review/` in its journal as a plain run | It is a run with a peer: start the peer, then the review lanes and the findings files are taken up |

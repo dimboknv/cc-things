@@ -10,7 +10,9 @@ The session that leads the run is not read, only its subagents.
 
 A rule here is a pattern over one command, so a finding is a place to look and not a verdict:
 a search for the text of a forbidden command matches as the command itself would. A rule that
-no pattern over one command can state is not here.
+no pattern over one command can state is not here. The rules about Go apply only to a checkout
+that tracks a go.mod, and a `make -C <dir>` counts as a Go build only when a go.mod lies under
+<dir>.
 
 Prints one line per finding and a count. Exits 1 when the run has no transcript.
 """
@@ -22,21 +24,49 @@ import subprocess
 import sys
 from pathlib import Path
 
-GO = re.compile(
-    r"\bgo (build|test|vet|run|generate)\b|\bgolangci-lint run\b|\bmake\b(?! -C docs\b)"
-)
+GO = re.compile(r"\bgo (build|test|vet|run|generate)\b|\bgolangci-lint run\b")
+MAKE = re.compile(r"\bmake\b(?:\s+-C\s*(\S+))?")
 
-# (name, what the prompts say, the test of one command)
+
+def go_dirs(main: Path) -> list[str]:
+    """go_dirs lists the directories of the checkout that hold a tracked go.mod, "" for the root."""
+    listed = subprocess.run(
+        ["git", "-C", str(main), "ls-files", "--", "go.mod", "**/go.mod"],
+        capture_output=True,
+        text=True,
+    ).stdout.split()
+    return ["" if p == "go.mod" else str(Path(p).parent) for p in listed]
+
+
+def builds_go(c: str, mods: list[str]) -> bool:
+    """builds_go tells a command that builds, tests or lints Go; a make run in a directory with no
+    go.mod under it does not."""
+    if not mods:
+        return False
+    if GO.search(c):
+        return True
+    for m in MAKE.finditer(c):
+        target = (m.group(1) or "").strip("'\"").rstrip("/")
+        if not target or target == "." or "" in mods:
+            return True
+        if any(d == target or d.startswith(target + "/") for d in mods):
+            return True
+    return False
+
+
+# (name, what the prompts say, the test of one command and the checkout's go.mod directories)
 RULES = [
     (
         "shared-cache",
         "Go built, tested or linted without cache.sh in the same call",
-        lambda c: bool(GO.search(c)) and "cache.sh" not in c and "commit.sh" not in c,
+        lambda c, mods: builds_go(c, mods)
+        and "cache.sh" not in c
+        and "commit.sh" not in c,
     ),
     (
         "cache-cleared",
         "a cache every session shares was cleared",
-        lambda c: bool(
+        lambda c, mods: bool(
             re.search(
                 r"\bgolangci-lint cache clean\b|\bgo clean\b[^;&|]*-(cache|modcache)\b",
                 c,
@@ -46,7 +76,7 @@ RULES = [
     (
         "own-commit",
         "a commit or a staging made around commit.sh",
-        lambda c: bool(
+        lambda c, mods: bool(
             re.search(
                 r"\bgit (commit|stash|rm|mv)\b|\bgit add (-A|-p|--all|--patch)\b", c
             )
@@ -55,12 +85,14 @@ RULES = [
     (
         "hook-bypassed",
         "a hook was bypassed",
-        lambda c: bool(re.search(r"--no-verify\b|\bLEFTHOOK(_EXCLUDE)?=", c)),
+        lambda c, mods: bool(
+            re.search(r"--no-verify\b|\bLEFTHOOK(_EXCLUDE)?=|\bHUSKY=0\b", c)
+        ),
     ),
     (
         "e2e-run",
-        "the e2e suite was run, which only a task whose Needs: names the e2e lane may do",
-        lambda c: (
+        "a Go suite under the e2e build tag was run, which only a task whose Needs: names the stand it uses may do",
+        lambda c, mods: (
             bool(re.search(r"\bgo test\b[^;&|]*-tags[ =]\S*e2e", c))
             and not re.search(r"\bgo test\b[^;&|]* -c\b", c)
         ),
@@ -68,7 +100,7 @@ RULES = [
     (
         "journal-written",
         "the journal was written around progress.sh",
-        lambda c: bool(re.search(r">>?\s*\S*\.exec-plan/\S*progress\.md", c)),
+        lambda c, mods: bool(re.search(r">>?\s*\S*\.exec-plan/\S*progress\.md", c)),
     ),
 ]
 
@@ -135,7 +167,9 @@ def main() -> int:
     )
 
     agents = commands_read = findings = 0
-    for path in transcripts(main_checkout()):
+    main = main_checkout()
+    mods = go_dirs(main)
+    for path in transcripts(main):
         if not of_run.search(path.read_text(errors="replace")):
             continue
         agents += 1
@@ -143,7 +177,7 @@ def main() -> int:
         for command in commands(path):
             commands_read += 1
             for name, _, broken in RULES:
-                if broken(command):
+                if broken(command, mods):
                     findings += 1
                     shown = re.sub(r"^cd \S+ *(&&|;) *", "", " ".join(command.split()))
                     print(f"{name}: {who}: {shown[:200]}")

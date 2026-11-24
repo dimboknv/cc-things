@@ -15,13 +15,15 @@ values of that prompt.
   taken out of the index matches nothing, so the script fails before it commits. A renamed
   path is named twice, its old path and its new one, in the same commit.
 - No `git add -A`, no `git add -p`, no `git commit` of your own, no `git stash`.
-- The message follows the root `CLAUDE.md` Git section: `type(scope): description`, `type`
-  from spike|feat|fix|refactor|docs|test|chore|build|ci|perf|revert, the scope the affected
-  component (`skills`, `api-gateway`, `deploy`, ...), the description imperative, lowercase,
-  without a trailing period. `tools/hooks/commit-msg.sh` rejects anything else.
-- A commit that changes behaviour carries the body the root `CLAUDE.md` Git section asks for:
-  what is now true, why this way, and the `Plan:` line. A lane takes both paragraphs from the
-  `Result:` and the `Decision:` of its task.
+- The message follows the commit rules of the root `CLAUDE.md` of CHECKOUT, and a
+  commit-message hook of the project, when it has one, rejects anything else. Where the
+  project states no form, the form `git log` of the branch's recent commits shows; with none
+  there either, `type(scope): description`, `type` from
+  feat|fix|refactor|docs|test|chore|build|ci|perf|revert, the scope the affected component,
+  the description imperative, lowercase, without a trailing period.
+- A commit that changes behaviour carries a body: what is now true, and why this way, with
+  any line the project's commit rules add to a commit made from a plan. A lane takes both
+  paragraphs from the `Result:` and the `Decision:` of its task.
 - Split where a reviewer's attention splits: semantic edits, mechanical moves, generated
   output and a document fix are separate commits.
 - End the message with the attribution line your session's instructions give, when they give
@@ -29,4 +31,5 @@ values of that prompt.
 - Pass the message as one argument with real newlines inside the quotes. Never pipe it through
   `git commit -F -`: the hooks hang on it.
 - A hook that fails names its cause. Fix the cause and commit again. A hook is never bypassed:
-  no `--no-verify`, no `LEFTHOOK=0`, no edit to a hook so that it passes.
+  no `--no-verify`, no variable that turns the hooks off (`LEFTHOOK=0`, `HUSKY=0`), no edit to
+  a hook so that it passes.

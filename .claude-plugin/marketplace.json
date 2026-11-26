@@ -3,6 +3,11 @@
   "owner": {
     "name": "dimboknv"
   },
+  "allowCrossMarketplaceDependenciesOn": [
+    "revmux",
+    "revdiff",
+    "diagram-design"
+  ],
   "plugins": [
     {
       "name": "planning",

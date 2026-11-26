@@ -5,5 +5,10 @@
   "author": {
     "name": "dimboknv"
   },
-  "repository": "https://github.com/dimboknv/cc-things"
+  "repository": "https://github.com/dimboknv/cc-things",
+  "dependencies": [
+    "revmux@revmux",
+    "revdiff@revdiff",
+    "diagram-design@diagram-design"
+  ]
 }

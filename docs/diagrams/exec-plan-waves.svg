@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1280 624" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="exec-plan-waves-title exec-plan-waves-desc" id="exec-plan-waves-root">
+        <title id="exec-plan-waves-title">The exec-plan wave loop</title>
+        <desc id="exec-plan-waves-desc">Each wave the lead session picks the ready tasks, cuts one lane per task, lets the lane subagents tick their progress files in parallel, reads what came back, has one integrator merge the closed lanes and carry their marks into the plan, cleans up and starts the next wave, until no task is open or a lane stopped.</desc>
+        <defs>
+      <style>#exec-plan-waves-root { --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #bf4520;
+      --font-sans:     system-ui, -apple-system, sans-serif, system-ui, sans-serif;
+      --font-serif:    ui-serif, Georgia, serif, serif;
+      --font-mono:     ui-monospace, 'SF Mono', Menlo, monospace, ui-monospace, monospace; }
+      #exec-plan-waves-root { font-family: var(--font-sans); color: var(--color-ink); }
+      #exec-plan-waves-root .diagram-container { width: 100%; overflow-x: auto; }
+      @media print {
+#exec-plan-waves-root .diagram-container { overflow-x: visible; }
+}</style>
+          <marker id="exec-plan-waves-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+          <marker id="exec-plan-waves-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+        <!-- Lanes: hairline dividers, labels in the left margin -->
+        <line x1="24" y1="24" x2="1256" y2="24" stroke="#2d3142" stroke-width="1" stroke-opacity="0.18"/>
+        <line x1="24" y1="272" x2="1256" y2="272" stroke="#2d3142" stroke-width="1" stroke-opacity="0.18"/>
+        <line x1="24" y1="452" x2="1256" y2="452" stroke="#2d3142" stroke-width="1" stroke-opacity="0.18"/>
+        <line x1="24" y1="572" x2="1256" y2="572" stroke="#2d3142" stroke-width="1" stroke-opacity="0.18"/>
+        <g font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">
+          <text x="32" y="92" fill="#2d3142" font-size="8" letter-spacing="0.14em">LEAD SESSION</text>
+          <text x="32" y="108" fill="#4f5d75" font-size="9">reads no code,</text>
+          <text x="32" y="120" fill="#4f5d75" font-size="9">fixes nothing</text>
+          <text x="32" y="300" fill="#2d3142" font-size="8" letter-spacing="0.14em">LANES</text>
+          <text x="32" y="316" fill="#4f5d75" font-size="9">a subagent per task</text>
+          <text x="32" y="328" fill="#4f5d75" font-size="9">own worktree,</text>
+          <text x="32" y="340" fill="#4f5d75" font-size="9">all at once</text>
+          <text x="32" y="484" fill="#2d3142" font-size="8" letter-spacing="0.14em">INTEGRATOR</text>
+          <text x="32" y="500" fill="#4f5d75" font-size="9">one per wave</text>
+        </g>
+
+        <!-- Flow, drawn before the steps -->
+        <line x1="328" y1="120" x2="384" y2="120" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#exec-plan-waves-arrow)"/>
+        <path d="M504 168 V304 Q504 312 512 312 H604" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#exec-plan-waves-arrow)"/>
+        <path d="M444 168 V396 Q444 404 452 404 H604" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#exec-plan-waves-arrow)"/>
+        <path d="M780 312 H868 Q876 312 876 304 V168" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#exec-plan-waves-arrow)"/>
+        <path d="M780 404 H928 Q936 404 936 396 V168" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#exec-plan-waves-arrow)"/>
+        <path d="M996 120 H1012 Q1020 120 1020 128 V468" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#exec-plan-waves-arrow)"/>
+        <line x1="1080" y1="468" x2="1080" y2="168" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#exec-plan-waves-arrow)"/>
+        <path d="M1120 72 V56 Q1120 48 1112 48 H256 Q248 48 248 56 V72" fill="none" stroke="#bf4520" stroke-width="1.4" marker-end="url(#exec-plan-waves-arrow-accent)"/>
+        <line x1="248" y1="168" x2="248" y2="200" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#exec-plan-waves-arrow)"/>
+        <line x1="1168" y1="168" x2="1168" y2="200" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#exec-plan-waves-arrow)"/>
+
+        <!-- Flow labels on opaque masks -->
+        <g font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace" font-size="8" text-anchor="middle" letter-spacing="0.08em" fill="#4f5d75">
+          <rect x="337" y="102" width="38" height="12" rx="2" fill="#f5f5f5"/><text x="356" y="111">WAVE N</text>
+          <rect x="961" y="414" width="51" height="12" rx="2" fill="#f5f5f5"/><text x="986" y="423">ALL ENDED</text>
+          <rect x="1088" y="324" width="56" height="12" rx="2" fill="#f5f5f5"/><text x="1116" y="333">INTEGRATED</text>
+          <rect x="658" y="30" width="52" height="12" rx="2" fill="#f5f5f5"/><text x="684" y="39" fill="#bf4520">NEXT WAVE</text>
+          <rect x="256" y="178" width="66" height="12" rx="2" fill="#f5f5f5"/><text x="289" y="187">NO OPEN TASK</text>
+          <rect x="1176" y="178" width="66" height="12" rx="2" fill="#f5f5f5"/><text x="1209" y="187">LANE STOPPED</text>
+        </g>
+
+        <!-- Steps -->
+        <g font-family="system-ui, -apple-system, sans-serif,sans-serif" text-anchor="middle">
+          <!-- Lead: ready set -->
+          <g>
+            <rect x="168" y="72" width="160" height="96" rx="6" fill="#ffffff" stroke="#2d3142"/>
+            <text x="248" y="104" fill="#2d3142" font-size="12" font-weight="600">Ready set</text>
+            <g fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">
+              <text x="248" y="122">re-read the plan</text>
+              <text x="248" y="135">After: met, no ⚠ mark</text>
+              <text x="248" y="148">none ready → stop</text>
+            </g>
+          </g>
+          <!-- Lead: cut the lanes -->
+          <g>
+            <rect x="384" y="72" width="180" height="96" rx="6" fill="#ffffff" stroke="#2d3142"/>
+            <text x="474" y="104" fill="#2d3142" font-size="12" font-weight="600">Cut the lanes</text>
+            <g fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">
+              <text x="474" y="122">worktree at run tip</text>
+              <text x="474" y="135">section → lanes/task-N.md</text>
+              <text x="474" y="148">launch all in one message</text>
+            </g>
+          </g>
+          <!-- Lanes -->
+          <g>
+            <rect x="604" y="280" width="176" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+            <text x="692" y="304" fill="#2d3142" font-size="12" font-weight="600">Lane · task 3</text>
+            <g fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">
+              <text x="692" y="320">branch &lt;slug&gt;-task-3</text>
+              <text x="692" y="333">ticks lanes/task-3.md</text>
+            </g>
+          </g>
+          <g>
+            <rect x="604" y="372" width="176" height="64" rx="6" fill="#ffffff" stroke="#2d3142"/>
+            <text x="692" y="396" fill="#2d3142" font-size="12" font-weight="600">Lane · task 4</text>
+            <g fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">
+              <text x="692" y="412">branch &lt;slug&gt;-task-4</text>
+              <text x="692" y="425">ticks lanes/task-4.md</text>
+            </g>
+          </g>
+          <!-- Lead: read what came back -->
+          <g>
+            <rect x="816" y="72" width="180" height="96" rx="6" fill="#ffffff" stroke="#2d3142"/>
+            <text x="906" y="100" fill="#2d3142" font-size="12" font-weight="600">Read what came back</text>
+            <g fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">
+              <text x="906" y="117">all [x]: task done</text>
+              <text x="906" y="129">open: one fresh retry</text>
+              <text x="906" y="141">env blocker: resume once</text>
+              <text x="906" y="153">⚠ or [owner]: stopped</text>
+            </g>
+          </g>
+          <!-- Lead: clean up -->
+          <g>
+            <rect x="1040" y="72" width="160" height="96" rx="6" fill="#ffffff" stroke="#2d3142"/>
+            <text x="1120" y="104" fill="#2d3142" font-size="12" font-weight="600">Clean up</text>
+            <g fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">
+              <text x="1120" y="122">remove merged lanes</text>
+              <text x="1120" y="135">drop Go build cache</text>
+              <text x="1120" y="148">stopped lanes stay</text>
+            </g>
+          </g>
+          <!-- Exits -->
+          <g>
+            <rect x="168" y="200" width="160" height="56" rx="6" fill="#2d3142" stroke="#2d3142" stroke-dasharray="4,3" fill-opacity="0.02" stroke-opacity="0.35"/>
+            <text x="248" y="224" fill="#2d3142" font-size="12" font-weight="600">Whole-tree check</text>
+            <text x="248" y="240" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">after the last wave</text>
+          </g>
+          <g>
+            <rect x="1104" y="200" width="136" height="56" rx="6" fill="#2d3142" stroke="#2d3142" stroke-dasharray="4,3" fill-opacity="0.02" stroke-opacity="0.35"/>
+            <text x="1172" y="224" fill="#2d3142" font-size="12" font-weight="600">Stop report</text>
+            <text x="1172" y="240" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">after integrating</text>
+          </g>
+          <!-- Integrator: focal -->
+          <g>
+            <rect x="960" y="468" width="280" height="88" rx="6" fill="#bf4520" stroke="#bf4520" fill-opacity="0.08"/>
+            <text x="1100" y="492" fill="#2d3142" font-size="12" font-weight="600">Integrate wave N</text>
+            <g fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace">
+              <text x="1100" y="509">merge the lanes with every [x]</text>
+              <text x="1100" y="521">regenerate · build + lint each repo</text>
+              <text x="1100" y="533">tests where two lanes met</text>
+              <text x="1100" y="545">carry ticks and ⚠ into the plan</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- Callout -->
+        <text x="900" y="508" fill="#2d3142" font-size="14" font-style="italic" font-family="ui-serif, Georgia, serif,serif" text-anchor="end">no lane sees another's edits until the merge;</text>
+        <text x="900" y="526" fill="#2d3142" font-size="14" font-style="italic" font-family="ui-serif, Georgia, serif,serif" text-anchor="end">the next wave is cut from the integrated tips</text>
+        <path d="M908 512 H956" fill="none" stroke="#2d3142" stroke-width="1" stroke-dasharray="4,3" stroke-opacity="0.40"/>
+        <circle cx="958" cy="512" r="2" fill="#2d3142"/>
+
+        <!-- Legend -->
+        <g font-family="ui-monospace, 'SF Mono', Menlo, monospace,monospace" font-size="8" fill="#4f5d75">
+          <text x="24" y="604" letter-spacing="0.14em">LEGEND</text>
+          <rect x="96" y="594" width="20" height="12" rx="3" fill="#ffffff" stroke="#2d3142"/>
+          <text x="124" y="604">step, in the lane of who runs it</text>
+          <rect x="300" y="594" width="20" height="12" rx="3" fill="#bf4520" stroke="#bf4520" fill-opacity="0.08"/>
+          <text x="328" y="604">focal: the one agent that writes the plan</text>
+          <rect x="560" y="594" width="20" height="12" rx="3" fill="#2d3142" stroke="#2d3142" stroke-dasharray="3,2" fill-opacity="0.02" stroke-opacity="0.35"/>
+          <text x="588" y="604">leaves the loop</text>
+          <path d="M688 600 H716" stroke="#4f5d75" stroke-width="1.2"/><polygon points="716 597, 722 600, 716 603" fill="#4f5d75"/>
+          <text x="730" y="604">flow</text>
+          <path d="M776 600 H804" stroke="#bf4520" stroke-width="1.4"/><polygon points="804 597, 810 600, 804 603" fill="#bf4520"/>
+          <text x="818" y="604">next wave</text>
+          <path d="M884 600 H912" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="5,4"/><polygon points="912 597, 918 600, 912 603" fill="#4f5d75"/>
+          <text x="926" y="604">exit</text>
+        </g>
+      </svg>

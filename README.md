@@ -17,6 +17,10 @@ The skills assume agterm for the fork page, the peer and the
 status page, and [revmux](https://github.com/umputun/revmux) for review rounds. Outside agterm a fork
 goes to the chat as a message; without revmux the `plan-review` agent reviews a plan.
 
+![The planning loop: brainstorm, make-plan, exec-plan](docs/diagrams/planning-loop.svg)
+
+How each skill runs inside, step by step: [docs/diagrams](docs/diagrams/README.md).
+
 ### Install
 
 planning depends on three plugins from other marketplaces: `revmux`, `revdiff` and
@@ -44,10 +48,10 @@ and a missing one costs only the step that needs it.
 | `revmux` | review rounds of a plan and of a run | `brew install umputun/apps/revmux` | `/planning:exec-plan` stops before it starts; `/planning:make-plan` reviews the plan with the `plan-review` agent |
 | `revdiff` | the owner's review of the branch at the end of a run | `brew install umputun/apps/revdiff` | the run report is the end, the pull requests are the next step |
 | `claude` | the review agents of revmux and the Claude peer | [Claude Code](https://code.claude.com/docs) | `/planning:exec-plan` stops before it starts |
-| `codex` | the second model of the review rounds and the Codex peer | `brew install --cask codex` | review rounds run on the profile `claude-only`; `peer codex` is refused |
+| `codex` | the second model of the review rounds and the Codex peer | `brew install --cask codex` | `/planning:exec-plan` runs its review rounds on the profile `claude-only`; `/planning:make-plan` offers the `plan-review` agent instead of the `plan` round; `peer codex` is refused |
 | `agtermctl`, with the agterm app | the fork page, the picker, the peer pane and the status page | `brew install --cask umputun/apps/agterm` | a fork goes to the chat as a message, a question to Claude Code's own picker; no peer; the status page is only a file in the run's journal |
 | `mailbox-chat.py` | messages between the lead and the peer | agterm cookbook, see below | the peer is refused at start |
-| `python3`, 3.10 or newer | the fork page, the picker and the acceptance check of `/planning:make-plan` | `brew install python`; the `python3` of `xcode-select --install` is 3.9 | those scripts do not run |
+| `python3`, 3.9 or newer | the fork page, the picker and the acceptance check of `/planning:make-plan`; the status page and the run audit of `/planning:exec-plan` | `brew install python`, or the `python3` of `xcode-select --install` | those scripts do not run; the status page never appears, with no error |
 
 The peer also needs the `mailbox-chat` skill and the mailbox hooks of Claude Code, of Codex and
 of agterm. The `two-agent-mailbox-chat` recipe of the
@@ -55,20 +59,30 @@ of agterm. The `two-agent-mailbox-chat` recipe of the
 `mailbox-chat.py`, the skill and the hooks: follow its Setup steps. Without them, run the
 skills with `no peer`.
 
-Link the plugin's review lens and profiles into revmux's user layer once:
+The menu item webrev of `/planning:make-plan`, the owner's own reading of a plan in the agterm
+overlay, needs the `webrev` skill among the user's skills. planning does not ship it; without
+it the item says so and returns to the menu.
+
+Link the plugin's review lens and profiles into revmux's user layer once. The command runs
+under `sh`, so it works from any shell, fish included, and it finds the plugins under
+`${CLAUDE_CONFIG_DIR:-~/.claude}`:
 
 ```
-mkdir -p ~/.config/revmux/lenses ~/.config/revmux/prompts/profiles
-P=~/.claude/plugins/marketplaces/dimboknv-cc-things/plugins/planning/revmux
-ln -sf $P/lenses/plan.md ~/.config/revmux/lenses/plan.md
-ln -sf $P/prompts/profiles/plan.md $P/prompts/profiles/plan-recheck.md ~/.config/revmux/prompts/profiles/
+sh -c '
+P=${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/marketplaces/dimboknv-cc-things/plugins/planning/revmux
+R=$HOME/.config/revmux
+mkdir -p "$R/lenses" "$R/prompts/profiles"
+ln -sf "$P/lenses/plan.md" "$R/lenses/plan.md"
+ln -sf "$P/prompts/profiles/plan.md" "$P/prompts/profiles/plan-recheck.md" "$R/prompts/profiles/"
+'
 ```
 
 ### Project rules
 
 A project tells the skills where its plans live, its gates, the records that bind a design and
 its review profiles in `.claude/planning/rules.md`, at the top of the checkout or in any directory
-above it; `~/.config/cc-things/planning/rules.md` serves every project without one. The sections and their defaults: `plugins/planning/references/rules.md`.
+above it; `${XDG_CONFIG_HOME:-~/.config}/cc-things/planning/rules.md` serves every project
+without one. The sections and their defaults: `plugins/planning/references/rules.md`.
 
 ### A plan across several repositories
 

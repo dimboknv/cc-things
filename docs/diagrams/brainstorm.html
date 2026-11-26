@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How /planning:brainstorm runs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #bf4520;
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1000px; width: 100%; min-width: 0; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 1000px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Flowchart · planning plugin</p>
+    <h1>How /planning:brainstorm runs</h1>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 1088" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="brainstorm-title brainstorm-desc">
+        <title id="brainstorm-title">How /planning:brainstorm runs</title>
+        <desc id="brainstorm-desc">The brainstorm session asks about a peer, frames the goal, reads the facts, then puts the forks to the owner one at a time, assembles the design, checks nothing is left open, and ends with a confirmed summary and a three-item menu.</desc>
+        <defs>
+          <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="rgba(45,49,66,0.10)"/>
+          </pattern>
+          <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+          <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+        <rect width="100%" height="100%" fill="url(#dots)" opacity="0.55"/>
+
+        <!-- Arrows (drawn first, behind nodes) -->
+        <line x1="440" y1="112" x2="440" y2="144" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="440" y1="200" x2="440" y2="232" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="440" y1="328" x2="440" y2="360" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <line x1="440" y1="416" x2="440" y2="448" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Fork → next fork (back to the list) -->
+        <path d="M 580 488 H 620 Q 628 488 628 480 V 408 Q 628 400 620 400 H 580" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Fork → assembly -->
+        <line x1="440" y1="528" x2="440" y2="568" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Fork → open question, skipping assembly -->
+        <path d="M 300 488 H 260 Q 252 488 252 496 V 704 Q 252 712 260 712 H 330" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Assembly → open question -->
+        <line x1="440" y1="624" x2="440" y2="664" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Open question YES → list -->
+        <path d="M 550 712 H 712 Q 720 712 720 704 V 384 Q 720 376 712 376 H 580" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Open question NO → summary -->
+        <line x1="440" y1="760" x2="440" y2="800" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+        <!-- Summary → menu -->
+        <line x1="440" y1="880" x2="440" y2="920" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+        <!-- Arrow labels -->
+        <rect x="636" y="436" width="64" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="668" y="445" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NEXT FORK</text>
+
+        <rect x="448" y="542" width="76" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="486" y="551" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">ALL SETTLED</text>
+
+        <rect x="180" y="594" width="64" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="212" y="603" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">ONE FORK</text>
+
+        <rect x="604" y="692" width="64" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="636" y="701" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NEW FORKS</text>
+
+        <rect x="448" y="774" width="24" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="460" y="783" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+
+        <rect x="448" y="894" width="68" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="482" y="903" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.12em">CONFIRMED</text>
+
+        <!-- 1. Peer question -->
+        <rect x="300" y="40" width="280" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="440" y="64" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Ask: which peer?</text>
+        <text x="440" y="82" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">no peer · Claude Code · Codex</text>
+        <text x="440" y="96" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">agterm only; skipped if the request says</text>
+
+        <!-- 2. Frame -->
+        <rect x="300" y="144" width="280" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="440" y="168" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Frame</text>
+        <text x="440" y="186" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">what the owner wants at the end</text>
+
+        <!-- 3. Facts -->
+        <rect x="300" y="232" width="280" height="96" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="440" y="256" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Facts before questions</text>
+        <text x="440" y="274" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">memory: MEMORY.md and its notes</text>
+        <text x="440" y="288" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">rules.sh → Records: what binds</text>
+        <text x="440" y="302" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">glossary, then the tree</text>
+        <text x="440" y="316" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">research: proposed, runs after a go</text>
+
+        <!-- 4. Fork list -->
+        <rect x="300" y="360" width="280" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="440" y="384" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">List of forks</text>
+        <text x="440" y="402" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">how many, each in a few plain words</text>
+
+        <!-- 5. Fork k of N (focal) -->
+        <rect x="300" y="448" width="280" height="80" rx="6" fill="rgba(191,69,32,0.08)" stroke="#bf4520" stroke-width="1"/>
+        <text x="440" y="472" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Fork k of N, one at a time</text>
+        <text x="440" y="490" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">plain words first, then 2–3 options</text>
+        <text x="440" y="504" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">a page in agterm, a message outside</text>
+        <text x="440" y="518" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">detail: brainstorm-fork</text>
+
+        <!-- 6. Assembly -->
+        <rect x="300" y="568" width="280" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="440" y="592" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Assembly</text>
+        <text x="440" y="610" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">≤300-word sections · “does this hold?”</text>
+
+        <!-- 7. Anything left open? -->
+        <polygon points="440,664 550,712 440,760 330,712" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="440" y="710" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Anything left open?</text>
+        <text x="440" y="726" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">«ещё вопросы?»</text>
+
+        <!-- 8. Summary -->
+        <rect x="300" y="800" width="280" height="80" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="440" y="824" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Summary, owner confirms</text>
+        <text x="440" y="842" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">decisions in the owner's words</text>
+        <text x="440" y="856" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">what stayed open</text>
+        <text x="440" y="870" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">the agent's own proposals, apart</text>
+
+        <!-- 9. End menu -->
+        <rect x="300" y="920" width="280" height="72" rx="20" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+        <text x="440" y="944" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">End menu</text>
+        <text x="440" y="962" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">1 stop · 2 /planning:make-plan</text>
+        <text x="440" y="976" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">3 save the summary to a file</text>
+
+        <!-- Callout: the peer -->
+        <path d="M 748 72 Q 670 62 584 76" fill="none" stroke="rgba(45,49,66,0.40)" stroke-width="1" stroke-dasharray="4,3"/>
+        <circle cx="584" cy="76" r="2" fill="#2d3142"/>
+        <text x="756" y="64" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">with a peer: a second agent</text>
+        <text x="756" y="82" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">in the split pane builds every</text>
+        <text x="756" y="100" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">fork blind and argues it out</text>
+        <text x="756" y="118" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">before the owner sees it</text>
+
+        <!-- Callout: ask first -->
+        <path d="M 748 956 Q 670 946 584 956" fill="none" stroke="rgba(45,49,66,0.40)" stroke-width="1" stroke-dasharray="4,3"/>
+        <circle cx="584" cy="956" r="2" fill="#2d3142"/>
+        <text x="756" y="944" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">nothing starts on its own:</text>
+        <text x="756" y="962" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">no agent, file or plan without</text>
+        <text x="756" y="980" fill="#2d3142" font-size="14" font-style="italic" font-family="'Instrument Serif', serif">an answer from the owner</text>
+
+        <!-- Legend -->
+        <line x1="40" y1="1020" x2="960" y2="1020" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+        <text x="40" y="1036" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+
+        <rect x="40" y="1052" width="24" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="72" y="1062" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Step</text>
+
+        <polygon points="120,1058 132,1052 144,1058 132,1064" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="156" y="1062" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Decision</text>
+
+        <rect x="228" y="1052" width="24" height="12" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+        <text x="260" y="1062" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">End</text>
+
+        <rect x="312" y="1052" width="24" height="12" rx="2" fill="rgba(191,69,32,0.08)" stroke="#bf4520" stroke-width="1"/>
+        <text x="344" y="1062" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">The fork loop, drawn in detail apart</text>
+      </svg>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 1120 872" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="brainstorm-fork-title brainstorm-fork-desc" id="brainstorm-fork-root">
+        <title id="brainstorm-fork-title">One brainstorm fork, draft to answer</title>
+        <desc id="brainstorm-fork-desc">One fork of a brainstorm is drafted in two stages, shown as a page in the agterm overlay with a picture from the page, diagram-design or the lead, or as a chat message outside agterm, and the owner's answer either settles it or sends it back to be asked again.</desc>
+        <defs>
+      <style>#brainstorm-fork-root { --color-paper:   #f5f5f5;
+      --color-ink:     #2d3142;
+      --color-muted:   #4f5d75;
+      --color-accent:  #bf4520;
+      --font-sans:     system-ui, -apple-system, sans-serif, system-ui, sans-serif;
+      --font-serif:    ui-serif, Georgia, serif, serif;
+      --font-mono:     ui-monospace, 'SF Mono', Menlo, monospace, ui-monospace, monospace; }
+      #brainstorm-fork-root { font-family: var(--font-sans); color: var(--color-ink); }
+      #brainstorm-fork-root .diagram-container { width: 100%; overflow-x: auto; }
+      @media print {
+#brainstorm-fork-root .diagram-container { overflow-x: visible; }
+}</style>
+          <pattern id="brainstorm-fork-dots" width="22" height="22" patternUnits="userSpaceOnUse">
+            <circle cx="1" cy="1" r="0.9" fill="#2d3142" fill-opacity="0.10"/>
+          </pattern>
+          <marker id="brainstorm-fork-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+          <marker id="brainstorm-fork-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker>
+        </defs>
+
+        <rect width="100%" height="100%" fill="#f5f5f5"/>
+        <rect width="100%" height="100%" fill="url(#brainstorm-fork-dots)" opacity="0.55"/>
+
+        <!-- Picture group boundary (behind everything) -->
+        <rect x="712" y="304" width="328" height="224" rx="6" fill="none" stroke="#2d3142" stroke-width="1" stroke-dasharray="4,3" stroke-opacity="0.30"/>
+        <text x="712" y="292" fill="#4f5d75" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" letter-spacing="0.18em">PICTURE · ONLY IF THE FORK HAS A SHAPE</text>
+
+        <!-- Arrows (drawn first, behind nodes) -->
+        <!-- Draft → agterm? -->
+        <line x1="500" y1="128" x2="500" y2="168" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#brainstorm-fork-arrow)"/>
+        <!-- agterm? NO → chat -->
+        <line x1="404" y1="216" x2="300" y2="216" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#brainstorm-fork-arrow)"/>
+        <!-- agterm? YES → page -->
+        <line x1="500" y1="264" x2="500" y2="320" stroke="#bf4520" stroke-width="1.4" marker-end="url(#brainstorm-fork-arrow-accent)"/>
+        <!-- Drawers → page -->
+        <line x1="728" y1="348" x2="640" y2="348" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#brainstorm-fork-arrow)"/>
+        <path d="M 728 416 H 696 Q 688 416 688 408 V 384 Q 688 376 680 376 H 640" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#brainstorm-fork-arrow)"/>
+        <path d="M 728 484 H 684 Q 676 484 676 476 V 412 Q 676 404 668 404 H 640" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#brainstorm-fork-arrow)"/>
+        <!-- Page → answer -->
+        <line x1="500" y1="432" x2="500" y2="536" stroke="#bf4520" stroke-width="1.4" marker-end="url(#brainstorm-fork-arrow-accent)"/>
+        <!-- Chat → answer -->
+        <path d="M 180 252 V 576 Q 180 584 188 584 H 400" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#brainstorm-fork-arrow)"/>
+        <!-- Answer PICK → restate -->
+        <line x1="500" y1="632" x2="500" y2="680" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#brainstorm-fork-arrow)"/>
+        <!-- Answer EXPLAIN → draft again -->
+        <path d="M 600 584 H 1072 Q 1080 584 1080 576 V 92 Q 1080 84 1072 84 H 640" fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#brainstorm-fork-arrow)"/>
+
+        <!-- Arrow labels -->
+        <rect x="336" y="196" width="32" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="352" y="205" fill="#4f5d75" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle" letter-spacing="0.12em">NO</text>
+
+        <rect x="508" y="286" width="32" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="524" y="295" fill="#bf4520" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle" letter-spacing="0.12em">YES</text>
+
+        <rect x="508" y="478" width="80" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="548" y="487" fill="#4f5d75" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle" letter-spacing="0.12em">JSON ANSWER</text>
+
+        <rect x="508" y="650" width="72" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="544" y="659" fill="#4f5d75" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle" letter-spacing="0.12em">PICK / OWN</text>
+
+        <rect x="792" y="564" width="96" height="12" rx="2" fill="#f5f5f5"/>
+        <text x="840" y="573" fill="#4f5d75" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle" letter-spacing="0.12em">EXPLAIN · NOTE</text>
+
+        <!-- Draft -->
+        <rect x="360" y="40" width="280" height="88" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="500" y="62" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">Draft the fork in two stages</text>
+        <text x="500" y="80" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">1 · today in plain words, by role</text>
+        <text x="500" y="94" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">2 · 2–3 options, simplest first:</text>
+        <text x="500" y="108" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">scenario · price · one recommendation</text>
+
+        <!-- Inside agterm? -->
+        <polygon points="500,168 596,216 500,264 404,216" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="500" y="220" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">Inside agterm?</text>
+
+        <!-- Chat message -->
+        <rect x="60" y="180" width="240" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="180" y="206" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">Fork as a chat message</text>
+        <text x="180" y="224" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">the same two stages, as text</text>
+        <text x="180" y="238" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">one fork per message</text>
+
+        <!-- Fork page (focal) -->
+        <rect x="360" y="320" width="280" height="112" rx="6" fill="#bf4520" stroke="#bf4520" stroke-width="1" fill-opacity="0.08"/>
+        <text x="500" y="344" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">Fork page in the overlay</text>
+        <text x="500" y="362" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">fork.py show, in the background</text>
+        <text x="500" y="376" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">today block + 2–3 option cards</text>
+        <text x="500" y="390" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">the owner picks and comments there</text>
+        <text x="500" y="404" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">the chat gets one line meanwhile</text>
+        <text x="500" y="418" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">no shape: cards with text only</text>
+
+        <!-- Drawers -->
+        <rect x="728" y="320" width="296" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="876" y="342" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">Who asks whom</text>
+        <text x="876" y="360" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">data-flow JSON · the page draws it</text>
+
+        <rect x="728" y="388" width="296" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="876" y="410" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">Stores, states, order</text>
+        <text x="876" y="428" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">diagram-design picks the type</text>
+
+        <rect x="728" y="456" width="296" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="876" y="478" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">The user's screen</text>
+        <text x="876" y="496" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">inline svg · the lead draws it by hand</text>
+
+        <!-- Owner's answer -->
+        <polygon points="500,536 600,584 500,632 400,584" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="500" y="582" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">Owner's answer</text>
+        <text x="500" y="598" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">pick · own · explain</text>
+
+        <!-- Record, next fork -->
+        <rect x="340" y="680" width="320" height="88" rx="20" fill="#2d3142" stroke="#2d3142" stroke-width="1" fill-opacity="0.03" stroke-opacity="0.30"/>
+        <text x="500" y="704" fill="#2d3142" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif, sans-serif" text-anchor="middle">Record it, then the next fork</text>
+        <text x="500" y="722" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">pick and comments word for word in chat</text>
+        <text x="500" y="736" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">a silent yes: “so X, because Y”</text>
+        <text x="500" y="750" fill="#4f5d75" font-size="9" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" text-anchor="middle">what the agent adds: a fork of its own</text>
+
+        <!-- Callout: the peer -->
+        <path d="M 700 180 Q 650 236 620 316" fill="none" stroke="#2d3142" stroke-width="1" stroke-dasharray="4,3" stroke-opacity="0.40"/>
+        <circle cx="620" cy="316" r="2" fill="#2d3142"/>
+        <text x="708" y="160" fill="#2d3142" font-size="14" font-style="italic" font-family="ui-serif, Georgia, serif, serif">with a peer, the draft goes to the peer</text>
+        <text x="708" y="178" fill="#2d3142" font-size="14" font-style="italic" font-family="ui-serif, Georgia, serif, serif">for a clash first; the page opens after it</text>
+
+        <!-- Callout: asked again -->
+        <path d="M 700 636 Q 690 612 700 588" fill="none" stroke="#2d3142" stroke-width="1" stroke-dasharray="4,3" stroke-opacity="0.40"/>
+        <circle cx="700" cy="586" r="2" fill="#2d3142"/>
+        <text x="708" y="644" fill="#2d3142" font-size="14" font-style="italic" font-family="ui-serif, Georgia, serif, serif">explained plainer and asked again, as a page again;</text>
+        <text x="708" y="662" fill="#2d3142" font-size="14" font-style="italic" font-family="ui-serif, Georgia, serif, serif">a note on the today block says a fact is wrong,</text>
+        <text x="708" y="680" fill="#2d3142" font-size="14" font-style="italic" font-family="ui-serif, Georgia, serif, serif">and it is checked before anything else</text>
+
+        <!-- Legend -->
+        <line x1="40" y1="800" x2="1080" y2="800" stroke="#2d3142" stroke-width="0.8" stroke-opacity="0.10"/>
+        <text x="40" y="816" fill="#4f5d75" font-size="8" font-family="ui-monospace, 'SF Mono', Menlo, monospace, monospace" letter-spacing="0.18em">LEGEND · SHAPE CARRIES TYPE</text>
+
+        <rect x="40" y="832" width="24" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="72" y="842" fill="#4f5d75" font-size="8.5" font-family="system-ui, -apple-system, sans-serif, sans-serif">Step</text>
+
+        <polygon points="120,838 132,832 144,838 132,844" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+        <text x="156" y="842" fill="#4f5d75" font-size="8.5" font-family="system-ui, -apple-system, sans-serif, sans-serif">Decision</text>
+
+        <rect x="228" y="832" width="24" height="12" rx="6" fill="#2d3142" stroke="#2d3142" stroke-width="1" fill-opacity="0.03" stroke-opacity="0.30"/>
+        <text x="260" y="842" fill="#4f5d75" font-size="8.5" font-family="system-ui, -apple-system, sans-serif, sans-serif">End of the fork</text>
+
+        <line x1="352" y1="840" x2="380" y2="840" stroke="#bf4520" stroke-width="1.4" marker-end="url(#brainstorm-fork-arrow-accent)"/>
+        <text x="388" y="842" fill="#4f5d75" font-size="8.5" font-family="system-ui, -apple-system, sans-serif, sans-serif">Path inside agterm</text>
+
+        <rect x="492" y="832" width="24" height="12" rx="2" fill="none" stroke="#2d3142" stroke-width="1" stroke-dasharray="4,3" stroke-opacity="0.30"/>
+        <text x="524" y="842" fill="#4f5d75" font-size="8.5" font-family="system-ui, -apple-system, sans-serif, sans-serif">Who draws the picture, by its kind</text>
+      </svg>

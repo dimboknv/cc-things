@@ -93,9 +93,8 @@ the areas the request names with the records that bind or explain them.
   binding does bind, and an option that breaks one says so. With no `Records` section, the code
   and the vendor's document are the only checks, and nothing binds but the rules the owner has
   stated.
-- Research is proposed, not launched: how many `Explore` agents, or `thinking-tools:ask-codex`,
-  or `thinking-tools:dialectic`, and what each is to find, one line each. It runs after the
-  owner's go.
+- Research is proposed, not launched: how many `Explore` agents and what each is to find, one
+  line each. It runs after the owner's go.
 - Every option is checked against the rules the owner has stated before it goes into a
   question. An option a stated rule excludes is not offered; an option that bends one says so.
 
@@ -153,6 +152,10 @@ states an object passes. A fork with no shape gets cards with text and no pictur
 - **One picture answers the question of the fork**, and the question picks its kind: who asks
   whom is a flow between roles; where data lives is stores with their owners; what happens to
   an object is its states; what the user sees is a sketch of the screen.
+- **The kind picks who draws it.** A flow is drawn by the page. Everything else goes to
+  diagram-design first, which picks the type. A shape it has no type for, a screen above all,
+  the lead draws by hand. How to load diagram-design, how to answer its pauses and what to ask
+  of it are in [references/diagrams.md](../../references/diagrams.md).
 - **Today is drawn once, and every option is the same picture.** The same roles stand in the
   same places, and colour marks only what the option adds and what it removes. A picture of an
   option shows the roles the difference touches, not the subsystem.
@@ -240,6 +243,7 @@ There is no fourth item, and "start now" is not one.
 | A picture per option, each laid out its own way | Today once; every option the same picture with the difference coloured |
 | The whole subsystem in an option's picture | The roles the difference touches |
 | A picture for a fork with no shape | Cards with text |
+| States or a store drawn by hand while diagram-design has a type for them | diagram-design first; by hand only a shape it has no type for |
 | A fork, or the same fork asked again, given as text inside agterm | A page; the chat carries only a name, a default, a flag |
 | The answer of the page left in the tool output | The pick and every comment word for word in the chat |
 | Chose for the owner on "не знаю" | Explain and ask again |

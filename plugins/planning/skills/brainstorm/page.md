@@ -4,7 +4,10 @@
 [`assets/fork.html`](assets/fork.html) and opens the result in the agterm overlay. `<skill dir>`
 is the absolute path [SKILL.md](SKILL.md) gives, here and for `fork.py result` below. The shell
 owns the look, the choice, the comment fields and the answer. The fragment owns the content.
-Write the fragment to the scratchpad as `fork-<n>.html`; the built page lands beside it.
+Write the fragment to the scratchpad as `fork-<n>.html`; the built page lands beside it. A
+fragment that links a diagram-design drawing is shown with
+`fork.py show <fragment> --diagram-design <diagram-design dir>`, as
+[Pictures](#pictures) says.
 
 ## The fragment
 
@@ -49,12 +52,17 @@ Write the fragment to the scratchpad as `fork-<n>.html`; the built page lands be
 - An option's `data-option` is a short id in Latin letters. It comes back in the answer and
   never reaches the owner's eyes; `data-title` does.
 - The picture of the today block and of an option is its first element: a `data-flow` script,
-  a `<figure>` or an `<svg>`. A block without one is text only.
+  a `<figure>`, an `<svg>` or a `<figure data-diagram>`. A block without one is text only.
 - `data-rejected` blocks are optional and land in a folded list with a "bring it back" mark.
 - Text from outside the session, a log line or an issue body, is HTML-escaped: the page can run
   agterm commands.
 
 ## Pictures
+
+Who draws which kind is in [`../../references/diagrams.md`](../../references/diagrams.md): a
+flow is the page's own `data-flow`; everything else is a diagram-design drawing; a shape
+diagram-design has no type for, the user's screen above all, is an `<svg>` the lead writes by
+hand. Below is the markup of each.
 
 **A flow, who asks whom.** `data-roles` places every role once, by `x` and `y` of its top
 left corner; the width follows the label unless `w` is given. Every `data-flow` draws from
@@ -64,11 +72,35 @@ part of this option). An edge is `[from, to, kind, step]`: `kind` is `""`, `"new
 `"gone"`, and `step` is the number of the scenario step the arrow carries, left out for an
 arrow outside the scenario.
 
-**Anything else**, states, a place where data lives, the user's screen, is an inline
-`<svg>` with a `viewBox`, written by hand. The shell's classes keep it in the theme:
+**A hand-drawn picture**, a shape diagram-design has no type for, is an inline `<svg>` with a
+`viewBox`. The shell's classes keep it in the theme:
 `node`, `node new`, `node off` on a `<g>` holding a `<rect>` and a `<text>`; `edge`,
 `edge new`, `edge gone` on a `<line>` or a `<path>`, which also draws the arrowhead. Colours
 come from `var(--new)`, `var(--gone)`, `var(--dim)`, `var(--accent)`, never from a literal.
+
+**A diagram-design drawing** is an empty `<figure data-diagram="fork-2-today.html"></figure>`
+as the block's first element. The value is the HTML file diagram-design wrote, a path relative
+to the fragment's folder or an absolute one. Pass the folder the diagram-design skill printed
+when it loaded ("Base directory for this skill: …") as `--diagram-design <dir>`; `fork.py` does
+not look for it, because the path changes with the version and the way the skill is installed.
+For each such figure `fork.py`:
+
+- exports the file with `<dir>/scripts/export_svg.py --system-fonts`, which carries the
+  drawing's styles into the SVG and prefixes its `<defs>` ids; the SVG lands beside the
+  fragment as `fork-<n>.diagram-<k>.svg`;
+- swaps Geist Mono, Geist and Instrument Serif for the system stacks
+  `ui-monospace, 'SF Mono', Menlo, monospace`, `system-ui, -apple-system, sans-serif` and
+  `ui-serif, Georgia, serif` in its `font-family` attributes, its `style` attributes and its
+  `<style>`, and leaves a label's text as it is: an SVG inside `<img>` loads no web font, and a
+  bare `monospace` there is a serif Courier;
+- embeds the result as an `<img>` with a data URI, so the page still opens without file
+  access.
+
+The shell shows such a picture across the whole card with the text under it, without its own
+legend of the marks, since the drawing carries one, and the whole fork in `rows`, whatever `data-layout` says: in a column or in three fifths of a row the
+drawing's labels shrink below reading size. A linked figure without `--diagram-design`, a
+folder without `scripts/export_svg.py`, a missing file or a failed export ends `show` with
+exit 1 and the reason on stderr.
 
 ## The answer
 

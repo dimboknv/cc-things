@@ -111,12 +111,12 @@ Decision: D1, D2, D3.
 
 Where: `.claude-plugin/`, `plugins/planning/.claude-plugin/`, `plugins/planning/skills/brainstorm/`, `README.md`.
 
-- [ ] `dependencies` в манифесте planning и allowlist в манифесте marketplace
-- [ ] шаг исследования brainstorm предлагает только Explore-агентов
-- [ ] README: раздел установки с тремя `marketplace add` до установки planning; список бинарников и mailbox-chat по D3
-- [ ] acceptance: `python3 -c "import json; d=json.load(open('plugins/planning/.claude-plugin/plugin.json')); assert {'revmux@revmux','revdiff@revdiff','diagram-design@diagram-design'} <= set(d.get('dependencies', []))"` и `python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); assert {'revmux','revdiff','diagram-design'} <= set(d.get('allowCrossMarketplaceDependenciesOn', []))"` проходят; `claude plugin validate plugins/planning` и `claude plugin validate .` проходят
-- [ ] acceptance: `rg -n -i 'thinking.?tools|ask-codex|dialectic' plugins README.md` пуст
-- [ ] acceptance: `rg -n 'marketplace add (umputun/revmux|umputun/revdiff|cathrynlavery/diagram-design)' README.md` находит все три; `rg -n 'two-agent-mailbox-chat' README.md` находит; `for b in revmux revdiff codex claude agtermctl mailbox-chat.py python3; do rg -q -F "$b" README.md || echo "missing $b"; done` ничего не печатает
+- [x] `dependencies` в манифесте planning и allowlist в манифесте marketplace
+- [x] шаг исследования brainstorm предлагает только Explore-агентов
+- [x] README: раздел установки с тремя `marketplace add` до установки planning; список бинарников и mailbox-chat по D3
+- [x] acceptance: `python3 -c "import json; d=json.load(open('plugins/planning/.claude-plugin/plugin.json')); assert {'revmux@revmux','revdiff@revdiff','diagram-design@diagram-design'} <= set(d.get('dependencies', []))"` и `python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); assert {'revmux','revdiff','diagram-design'} <= set(d.get('allowCrossMarketplaceDependenciesOn', []))"` проходят; `claude plugin validate plugins/planning` и `claude plugin validate .` проходят
+- [x] acceptance: `rg -n -i 'thinking.?tools|ask-codex|dialectic' plugins README.md` пуст
+- [x] acceptance: `rg -n 'marketplace add (umputun/revmux|umputun/revdiff|cathrynlavery/diagram-design)' README.md` находит все три; `rg -n 'two-agent-mailbox-chat' README.md` находит; `for b in revmux revdiff codex claude agtermctl mailbox-chat.py python3; do rg -q -F "$b" README.md || echo "missing $b"; done` ничего не печатает
 
 ### Task 2: запуск пира отказывается без скилла mailbox-chat у Claude
 
@@ -126,9 +126,9 @@ Decision: D4.
 
 Where: `plugins/planning/skills/brainstorm/scripts/`, `tests/`.
 
-- [ ] проверка скилла Claude рядом с проверкой хука Claude, для обоих видов пира
-- [ ] тест: стабы `agtermctl` и `mailbox-chat.py` первыми в `PATH`, временная `CLAUDE_CONFIG_DIR` с хуком в настройках; без скилла — отказ с его названием, со скиллом — эта проверка пройдена
-- [ ] acceptance: `rg -l 'peer\.sh' tests` находит тест; каждый `tests/*.sh` зелёный
+- [x] проверка скилла Claude рядом с проверкой хука Claude, для обоих видов пира
+- [x] тест: стабы `agtermctl` и `mailbox-chat.py` первыми в `PATH`, временная `CLAUDE_CONFIG_DIR` с хуком в настройках; без скилла — отказ с его названием, со скиллом — эта проверка пройдена
+- [x] acceptance: `rg -l 'peer\.sh' tests` находит тест; каждый `tests/*.sh` зелёный
 
 ### Task 3: fork-страница вшивает тёмные картинки diagram-design
 
@@ -138,11 +138,11 @@ Decision: D6, D8, D9.
 
 Where: `plugins/planning/skills/brainstorm/scripts/`, `plugins/planning/skills/brainstorm/assets/`, `plugins/planning/skills/brainstorm/page.md`, `tests/`.
 
-- [ ] `fork.py`: экспорт через `export_svg.py` переданной папки, замена шрифтов по D8, вшивание data-URI; ошибка с понятной причиной, если ссылка есть, а папки скилла или скрипта нет
-- [ ] `fork.html`: картинка diagram-design на всю ширину карточки с текстом под ней, раскладка `rows`
-- [ ] `page.md`: элемент картинки diagram-design, как передать папку скилла, что делает `fork.py`
-- [ ] тест со стабом `agtermctl` и своей папкой скилла, где стаб `export_svg.py` выдаёт SVG со шрифтами в разных написаниях (в кавычках и без, в атрибуте и в `<style>`, в сокращённом `font:`): в собранной странице картинка в data-URI, в декодированном SVG нет ни одного имени Geist, Geist Mono и Instrument Serif; без папки скилла — ошибка
-- [ ] acceptance: `rg -l 'fork\.py' tests` находит тест; каждый `tests/*.sh` зелёный; `ruff check plugins` чистый
+- [x] `fork.py`: экспорт через `export_svg.py` переданной папки, замена шрифтов по D8, вшивание data-URI; ошибка с понятной причиной, если ссылка есть, а папки скилла или скрипта нет
+- [x] `fork.html`: картинка diagram-design на всю ширину карточки с текстом под ней, раскладка `rows`
+- [x] `page.md`: элемент картинки diagram-design, как передать папку скилла, что делает `fork.py`
+- [x] тест со стабом `agtermctl` и своей папкой скилла, где стаб `export_svg.py` выдаёт SVG со шрифтами в разных написаниях (в кавычках и без, в атрибуте и в `<style>`, в сокращённом `font:`): в собранной странице картинка в data-URI, в декодированном SVG нет ни одного имени Geist, Geist Mono и Instrument Serif; без папки скилла — ошибка
+- [x] acceptance: `rg -l 'fork\.py' tests` находит тест; каждый `tests/*.sh` зелёный; `ruff check plugins` чистый
 
 ### Task 4: общие правила картинок diagram-design и их место в brainstorm
 
@@ -154,9 +154,9 @@ Where: `plugins/planning/references/`, `plugins/planning/skills/brainstorm/`.
 
 After: «fork-страница вшивает тёмные картинки diagram-design» (правила ссылаются на разметку и вызов, которые та задача описывает в `page.md`, и обе правят `page.md`); «planning объявляет зависимости и перечисляет внешнее в README» (обе правят `SKILL.md` brainstorm).
 
-- [ ] `references/diagrams.md`: кто рисует и запасной путь при отказе, загрузка под обоими именами и запоминание папки скилла, ответы на обе паузы, тёмный вариант, «сегодня» и варианты как копии, ссылка на разметку `page.md`
-- [ ] `SKILL.md` brainstorm, раздел «The fork page», и `page.md`, раздел «Pictures»: кто рисует какую форму, со ссылкой на `references/diagrams.md`
-- [ ] acceptance: `rg -n 'diagram-design:diagram-design' plugins/planning/references` находит; `rg -n 'references/diagrams\.md|diagrams\.md' plugins/planning/skills/brainstorm/SKILL.md plugins/planning/skills/brainstorm/page.md` находит в обоих файлах
+- [x] `references/diagrams.md`: кто рисует и запасной путь при отказе, загрузка под обоими именами и запоминание папки скилла, ответы на обе паузы, тёмный вариант, «сегодня» и варианты как копии, ссылка на разметку `page.md`
+- [x] `SKILL.md` brainstorm, раздел «The fork page», и `page.md`, раздел «Pictures»: кто рисует какую форму, со ссылкой на `references/diagrams.md`
+- [x] acceptance: `rg -n 'diagram-design:diagram-design' plugins/planning/references` находит; `rg -n 'references/diagrams\.md|diagrams\.md' plugins/planning/skills/brainstorm/SKILL.md plugins/planning/skills/brainstorm/page.md` находит в обоих файлах
 
 ## Post-Completion
 

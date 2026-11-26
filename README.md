@@ -19,10 +19,41 @@ goes to the chat as a message; without revmux the `plan-review` agent reviews a 
 
 ### Install
 
+planning depends on three plugins from other marketplaces: `revmux`, `revdiff` and
+`diagram-design`. Claude Code installs them with planning, but only from a marketplace you have
+already added. Add all three first, then this one:
+
 ```
+/plugin marketplace add umputun/revmux
+/plugin marketplace add umputun/revdiff
+/plugin marketplace add cathrynlavery/diagram-design
 /plugin marketplace add dimboknv/cc-things
 /plugin install planning@dimboknv-cc-things
 ```
+
+Without one of the three marketplaces the install warns that a dependency was not installed,
+and planning does not load, not even `/planning:brainstorm`.
+
+### Programs on `PATH`
+
+The plugins bring skills, not programs. Each program below is checked where a skill calls it,
+and a missing one costs only the step that needs it.
+
+| Program | Used for | Install | Without it |
+|---|---|---|---|
+| `revmux` | review rounds of a plan and of a run | `brew install umputun/apps/revmux` | `/planning:exec-plan` stops before it starts; `/planning:make-plan` reviews the plan with the `plan-review` agent |
+| `revdiff` | the owner's review of the branch at the end of a run | `brew install umputun/apps/revdiff` | the run report is the end, the pull requests are the next step |
+| `claude` | the review agents of revmux and the Claude peer | [Claude Code](https://code.claude.com/docs) | `/planning:exec-plan` stops before it starts |
+| `codex` | the second model of the review rounds and the Codex peer | `brew install --cask codex` | review rounds run on the profile `claude-only`; `peer codex` is refused |
+| `agtermctl`, with the agterm app | the fork page, the picker, the peer pane and the status page | `brew install --cask umputun/apps/agterm` | a fork goes to the chat as a message, a question to Claude Code's own picker; no peer; the status page is only a file in the run's journal |
+| `mailbox-chat.py` | messages between the lead and the peer | agterm cookbook, see below | the peer is refused at start |
+| `python3`, 3.10 or newer | the fork page, the picker and the acceptance check of `/planning:make-plan` | `brew install python`; the `python3` of `xcode-select --install` is 3.9 | those scripts do not run |
+
+The peer also needs the `mailbox-chat` skill and the mailbox hooks of Claude Code, of Codex and
+of agterm. The `two-agent-mailbox-chat` recipe of the
+[agterm cookbook](https://github.com/umputun/agterm/tree/master/cookbook) installs
+`mailbox-chat.py`, the skill and the hooks: follow its Setup steps. Without them, run the
+skills with `no peer`.
 
 Link the plugin's review lens and profiles into revmux's user layer once:
 

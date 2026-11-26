@@ -28,7 +28,17 @@ import sys
 from pathlib import Path
 
 GO = re.compile(r"\bgo (build|test|vet|run|generate)\b|\bgolangci-lint run\b")
-MAKE = re.compile(r"\bmake\b(?:\s+-C\s*(\S+))?")
+# make where a command starts, not the word inside a path such as skills/make-plan/: after an
+# operator, a subshell or group, a negation or a shell keyword, behind wrappers and assignments
+MAKE = re.compile(
+    r"(?:^|[;&|\n({!]|\b(?:if|then|do|else|elif|while|until)\b)\s*"
+    r"(?:(?:caffeinate -i|time|timeout(?:\s+-[ks]\s*\S+|\s+-\S+)*\s+\S+|env|nice(?:\s+-n\s*\S+)?|command|exec"
+    r"|\w+=\S+)\s+)*make\b(?:\s+-C\s*(\S+))?"
+)
+# git with its -C <dir>, -c <key=value> or --<option> options before the subcommand
+GIT = r"\bgit(?:\s+(?:-[Cc]\s*\S+|--\S+))*\s+"
+# the journal's directory as a command names it
+JOURNAL = r"(?:\S*\.exec-plan/|\$\{?EXEC_PLAN_JOURNAL\}?/)"
 
 
 def go_dirs(checkouts: list[Path]) -> list[str]:
@@ -86,7 +96,11 @@ RULES = [
         "a commit or a staging made around commit.sh",
         lambda c, mods: bool(
             re.search(
-                r"\bgit (commit|stash|rm|mv)\b|\bgit add (-A|-p|--all|--patch)\b", c
+                GIT
+                + r"(commit|stash|rm|mv)\b|"
+                + GIT
+                + r"add\s+(-A|-p|--all|--patch)\b",
+                c,
             )
         ),
     ),
@@ -108,7 +122,17 @@ RULES = [
     (
         "journal-written",
         "the journal was written around progress.sh",
-        lambda c, mods: bool(re.search(r">>?\s*\S*\.exec-plan/\S*progress\.md", c)),
+        lambda c, mods: bool(
+            re.search(
+                r"(?:>>?|\btee(?:\s+-\S+)*)\s*[\"']?" + JOURNAL + r"\S*progress\.md",
+                c,
+            )
+            or re.search(
+                r"\bcd\s+[\"']?(?:\S*\.exec-plan/|\$\{?EXEC_PLAN_JOURNAL\b).*?"
+                r"(?:>>?|\btee(?:\s+-\S+)*)\s*[\"']?(?:\./)?progress\.md",
+                c,
+            )
+        ),
     ),
 ]
 

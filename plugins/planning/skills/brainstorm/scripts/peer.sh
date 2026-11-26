@@ -8,9 +8,13 @@
 #   brief.md   the peer's instructions, the peer.md of the skill that starts it
 #   model-id   the model the Claude peer runs on; without it, the account's default
 #
-# A peer of the asked kind that already listens in the split is mailed the brief and kept: it
-# may be one another skill started. A split that holds anything else is refused: the pane is the owner's, and typing a launch line
-# into it would run inside whatever the owner started there.
+# A peer of the asked kind that already listens in the split is mailed the brief and kept when
+# this script started it, for this skill or another: a mark named by the pane id records that.
+# A listener without the mark may be the owner's own session and is refused. The mark is written
+# as soon as the pane is launched, since a trust or login prompt can hold the peer past the wait,
+# and dropped once a peer that listened there no longer does: what listens in that pane later is
+# the owner's. A split that holds anything else is refused too: the pane is the owner's, and
+# typing a launch line into it would run inside whatever the owner started there.
 #
 # The Claude peer gets a session id of its own and runs the `claude` binary through `command`.
 # The owner's `claude` shell function resumes the conversation bound to the agterm session id,
@@ -72,19 +76,59 @@ if [ "$kind" = codex ]; then
     || refuse "no mailbox-chat skill under $codex_home/skills: Codex would not know how to answer"
 fi
 
-receiver() {
-  mailbox-chat.py status 2>/dev/null | sed -n 's/.*"receiver": *"\([a-z]*\)".*/\1/p'
+# agtermctl never reads AGTERM_SOCKET, so a session on a custom socket is passed one
+ctl() {
+  if [ -n "${AGTERM_SOCKET:-}" ]; then
+    agtermctl "$@" --socket "$AGTERM_SOCKET"
+  else
+    agtermctl "$@"
+  fi
+}
+
+# mailbox-chat.py reports its errors on stdout
+say_task() {
+  local out
+  out="$(printf '%s\n' "$task" | mailbox-chat.py say --stdin 2>&1)" \
+    || refuse "mailbox-chat.py say failed: $out"
+}
+
+field() {
+  sed -n "s/.*\"$1\": *\"\([^\"]*\)\".*/\1/p" <<<"$2"
+}
+
+# Not under TMPDIR: macOS ages its files out, and an exec-plan run paused for days keeps its peer.
+marks="$claude_dir/planning-peer"
+
+# mark <pane> <state>: started once the pane is launched, listening once its peer was seen
+mark() {
+  mkdir -p "$marks"
+  echo "$kind $2" >"$marks/$1"
 }
 
 status="$(mailbox-chat.py status 2>&1 || true)"
+pane="$(field peerPane "$status")"
 case "$status" in
   *"\"receiver\": \"$kind\""*)
-    printf '%s\n' "$task" | mailbox-chat.py say --stdin >/dev/null
+    [ -n "$pane" ] && [ -f "$marks/$pane" ] \
+      || refuse "a $kind listens in the split pane, but this script did not start it: it may be the owner's own session; close that pane and run this again ($status)"
+    mark "$pane" listening
+    say_task
     echo "$status"
     exit 0
     ;;
   *'no split'*) ;;
-  *'"receiver"'*) refuse "the split pane exists and no $kind listens in it: close it and run this again ($status)" ;;
+  *'"receiver"'*)
+    case "$status" in
+      *'"receiver": "none"'*)
+        if [ -n "$pane" ] && grep -qs ' listening$' "$marks/$pane"; then
+          rm -f "$marks/$pane"
+        elif [ -n "$pane" ] && grep -qs "^$kind started\$" "$marks/$pane"; then
+          refuse "the $kind this script started in the split pane does not listen yet: answer its trust or login prompt there and run this again, or close the pane and run this again ($status)"
+        fi
+        ;;
+    esac
+    refuse "the split pane exists and no $kind listens in it: close it and run this again ($status)"
+    ;;
   *) refuse "mailbox-chat.py status failed: $status" ;;
 esac
 
@@ -98,23 +142,31 @@ else
   line="command codex --no-daemon 'Answer with the single word READY.'"
 fi
 
-agtermctl session split on --axis vertical --target "$sid" >/dev/null
+ctl session split on --axis vertical --target "$sid" >/dev/null
 # `session restart` needs Live sessions mode; without it the line is typed into the fresh
 # shell, which nothing else writes to yet.
-if ! agtermctl session restart --pane right --target "$sid" --command "$line" >/dev/null 2>&1; then
+if ! ctl session restart --pane right --target "$sid" --command "$line" >/dev/null 2>&1; then
   sleep 1
-  printf '%s\n' "$line" | agtermctl session type --stdin --pane right --target "$sid" >/dev/null
+  printf '%s\n' "$line" | ctl session type --stdin --pane right --target "$sid" >/dev/null
 fi
-agtermctl session focus left --target "$sid" >/dev/null 2>&1 || true
+ctl session focus left --target "$sid" >/dev/null 2>&1 || true
 
+pane=""
 for _ in $(seq 1 60); do
-  if [ "$(receiver)" = "$kind" ]; then
+  status="$(mailbox-chat.py status 2>/dev/null || true)"
+  if [ -z "$pane" ]; then
+    pane="$(field peerPane "$status")"
+    [ -z "$pane" ] || mark "$pane" started
+  fi
+  if [ "$(field receiver "$status")" = "$kind" ]; then
+    [ -n "$pane" ] || refuse "mailbox-chat.py status names no peer pane: $status"
+    mark "$pane" listening
     if [ "$kind" = codex ]; then
-      printf '%s\n' "$task" | mailbox-chat.py say --stdin >/dev/null
+      say_task
     fi
-    mailbox-chat.py status
+    echo "$status"
     exit 0
   fi
   sleep 1
 done
-refuse "the peer did not start listening in 60s: look at the right pane (a trust or login prompt stops it)"
+refuse "the peer did not start listening in 60s: look at the right pane; a trust or login prompt stops it, and once it is answered, run this again"

@@ -50,8 +50,9 @@ def main() -> None:
 
     cmd = [os.environ.get("AGTERMCTL") or "agtermctl", "ask", "open", a.title,
            "--target", session, "--timeout", str(a.timeout), "--json"]
-    if a.message:
-        cmd += ["--message", a.message]
+    # In agterm's radio list the arrows only move the highlight; Space picks, Return answers.
+    keys = "↑↓ move · Space picks · Return answers"
+    cmd += ["--message", f"{a.message} · {keys}" if a.message else keys]
     for item_id, label, subtitle in a.item:
         cmd += ["--choice", f"{item_id}={label}"]
         if subtitle:

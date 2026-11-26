@@ -8,8 +8,9 @@
 SKILL_DIR is the folder of the loaded diagram-design skill; a fragment that links a
 diagram-design drawing needs it.
 
-Exit 0: stdout is the answer as JSON. Exit 2: the owner cancelled. Exit 3: still open, stdout is the
-page id. Exit 1: an error, on stderr.
+Exit 0: stdout is the answer as JSON. Exit 2: the owner cancelled. Exit 3: still open, or its
+state could not be read for a while; stdout is the page id. Exit 1: an error, on stderr; show
+opened no page, or result could not read a page that may still be open.
 """
 
 from __future__ import annotations
@@ -25,6 +26,9 @@ from pathlib import Path
 
 MARKER = "<!--FORK-->"
 POLL_SECONDS = 1.0
+# agtermctl can fail for a moment while the page stays open; only this many failed reads in a row
+# end the wait
+POLL_ERRORS = 30
 # show runs in the background; the cap only stops a page left open from polling for ever
 WAIT_SECONDS = 3 * 3600
 
@@ -33,6 +37,17 @@ DIAGRAM_RE = re.compile(
     r"""<figure\b[^>]*?\bdata-diagram=(["'])(.*?)\1[^>]*>\s*</figure\s*>""",
     re.IGNORECASE | re.DOTALL,
 )
+SCRIPT_RE = re.compile(r"<script\b([^>]*)>(.*?)</script\s*>", re.IGNORECASE | re.DOTALL)
+# a start or end tag with its attributes, so a quoted value that names an attribute stays a value
+TAG_RE = re.compile(
+    r"""<(/?)([a-z][\w-]*)((?:\s+[^\s"'>/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*/?>""",
+    re.IGNORECASE,
+)
+ATTR_RE = re.compile(
+    r"""([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?"""
+)
+# the shell keys its own choices and comment fields by these
+RESERVED_IDS = ("own", "explain", "today", "general")
 # Inside an <img> an SVG loads no web font, and a bare `monospace` there is a serif Courier in
 # WebKit. The names are swapped only where a font is declared, so a label that says "Geist"
 # keeps its text. A family name may be quoted with a quote or an XML entity, or not at all.
@@ -61,6 +76,107 @@ def system_font(match: re.Match[str]) -> str:
     else:
         stack = "system-ui, -apple-system, sans-serif"
     return f"{q}{stack}{q}" if delimiter else stack
+
+
+def is_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def attrs(text: str) -> dict[str, str]:
+    return {
+        a[1].lower(): next((v for v in a.groups()[1:] if v is not None), "")
+        for a in ATTR_RE.finditer(text)
+    }
+
+
+def tags(body: str) -> list[tuple[re.Match[str], dict[str, str]]]:
+    return [(t, attrs(t[3])) for t in TAG_RE.finditer(body)]
+
+
+def root_span(body: str) -> tuple[int, int] | None:
+    """Where the first data-place element starts and ends: the root the shell draws from."""
+    found = tags(body)
+    for n, (tag, attr) in enumerate(found):
+        if tag[1] or "data-place" not in attr:
+            continue
+        name, depth = tag[2].lower(), 0
+        for other, _ in found[n:]:
+            if other[2].lower() != name:
+                continue
+            depth += -1 if other[1] else 1
+            if depth == 0:
+                return tag.start(), other.end()
+        return tag.start(), len(body)
+    return None
+
+
+def parse_json(text: str, attr: str) -> object:
+    def constant(name: str) -> object:
+        # Python reads NaN and Infinity; the shell's JSON.parse throws on them
+        raise ValueError(f"{attr} is not JSON: {name} is not a JSON value")
+
+    try:
+        return json.loads(text, parse_constant=constant)
+    except json.JSONDecodeError as err:
+        raise ValueError(f"{attr} is not JSON: {err}") from None
+
+
+def check_fragment(body: str) -> None:
+    """Refuse what the shell's script cannot draw: it would stop before Send and Cancel work."""
+    for tag, attr in tags(body):
+        if not tag[1] and attr.get("data-option") in RESERVED_IDS:
+            raise ValueError(
+                f"the option id '{attr['data-option']}' is kept by the page; ids {', '.join(RESERVED_IDS)} are reserved"
+            )
+    roles: object = {}
+    flows: list[object] = []
+    roles_seen = 0
+    root = root_span(body)
+    for m in SCRIPT_RE.finditer(body):
+        script = attrs(m[1])
+        if "data-roles" in script:
+            roles_seen += 1
+            if roles_seen > 1:
+                raise ValueError("the fragment has more than one data-roles script")
+            if root is None or not root[0] <= m.start() < root[1]:
+                raise ValueError("the data-roles script must stand inside the data-place root")
+            roles = parse_json(m[2], "data-roles")
+        elif "data-flow" in script:
+            flows.append(parse_json(m[2], "data-flow"))
+    if not isinstance(roles, dict):
+        raise ValueError("data-roles is not a JSON object of roles")
+    for rid, role in roles.items():
+        if not (
+            isinstance(role, dict)
+            and is_number(role.get("x"))
+            and is_number(role.get("y"))
+            and isinstance(role.get("label"), str)
+            and ("w" not in role or is_number(role["w"]))
+        ):
+            raise ValueError(
+                f"data-roles: role '{rid}' needs a number x and y, a string label and, if given, a number w"
+            )
+    for flow in flows:
+        nodes = flow.get("nodes", {}) if isinstance(flow, dict) else None
+        edges = flow.get("edges", []) if isinstance(flow, dict) else None
+        if not isinstance(nodes, dict) or not isinstance(edges, list):
+            raise ValueError(
+                "a data-flow is a JSON object with a nodes object and an edges list"
+            )
+        named = list(nodes)
+        for edge in edges:
+            if not isinstance(edge, list) or len(edge) < 2:
+                raise ValueError(
+                    f"a data-flow edge is [from, to, kind, step]: {edge!r}"
+                )
+            if str(edge[0]) == str(edge[1]):
+                raise ValueError(f"a data-flow edge goes from role '{edge[0]}' to itself")
+            named += [str(edge[0]), str(edge[1])]
+        for rid in named:
+            if rid not in roles:
+                raise ValueError(
+                    f"a data-flow names role '{rid}', which data-roles does not place"
+                )
 
 
 def diagram_img(html: Path, skill_dir: Path, out: Path) -> str:
@@ -137,6 +253,17 @@ def read_outcome(page_id: str) -> tuple[str, str]:
     return state, outcome.get("value", "")
 
 
+def read_retried(page_id: str) -> tuple[str, str]:
+    """read_outcome, a failed read retried as show's wait retries it."""
+    errors = 0
+    while True:
+        state, text = read_outcome(page_id)
+        errors = errors + 1 if state == "error" else 0
+        if state != "error" or errors >= POLL_ERRORS:
+            return state, text
+        time.sleep(POLL_SECONDS)
+
+
 def finish(state: str, text: str, page_id: str) -> int:
     if state == "submitted":
         print(text)
@@ -151,7 +278,11 @@ def finish(state: str, text: str, page_id: str) -> int:
             file=sys.stderr,
         )
         return 3
-    print(f"fork: {text}", file=sys.stderr)
+    # the page may still be open: a second show would put another page over it
+    print(
+        f"fork: cannot read the page: {text}; read it again later with: fork.py result {page_id}",
+        file=sys.stderr,
+    )
     return 1
 
 
@@ -171,7 +302,14 @@ def show(fragment: Path, skill_dir: Path | None) -> int:
         )
         return 1
     try:
+        check_fragment(body)
         body = embed_diagrams(body, fragment, skill_dir)
+        if any(
+            tag[2].lower() == "figure" and "data-diagram" in attr for tag, attr in tags(body)
+        ):
+            raise ValueError(
+                "a data-diagram link was not embedded: its <figure> must be empty and the value quoted"
+            )
     except ValueError as err:
         print(f"fork: {err}", file=sys.stderr)
         return 1
@@ -210,12 +348,23 @@ def show(fragment: Path, skill_dir: Path | None) -> int:
     agtermctl("session", "status", "blocked", "--blink", *target)
     try:
         deadline = time.monotonic() + WAIT_SECONDS
-        state, text = read_outcome(page_id)
-        while state == "pending" and time.monotonic() < deadline:
-            time.sleep(POLL_SECONDS)
+        errors = 0
+        while True:
             state, text = read_outcome(page_id)
+            errors = errors + 1 if state == "error" else 0
+            if (
+                state not in ("pending", "error")
+                or errors >= POLL_ERRORS
+                or time.monotonic() >= deadline
+            ):
+                break
+            time.sleep(POLL_SECONDS)
     finally:
         agtermctl("session", "status", "idle", *target)
+    if state == "error":
+        # the page may still be open: a second show would put another page over it
+        print(f"fork: cannot read the page: {text}", file=sys.stderr)
+        state = "pending"
     return finish(state, text, page_id)
 
 
@@ -230,7 +379,7 @@ def main(argv: list[str]) -> int:
     ):
         return show(Path(argv[2]), Path(argv[4]))
     if len(argv) == 3 and argv[1] == "result":
-        return finish(*read_outcome(argv[2]), argv[2])
+        return finish(*read_retried(argv[2]), argv[2])
     print(__doc__, file=sys.stderr)
     return 1
 

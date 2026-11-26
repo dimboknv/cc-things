@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Prints the project rules the skills follow: the nearest .claude/planning/rules.md from the top
-# of the checkout up to, not including, $HOME, else ~/.config/cc-things/planning/rules.md. The
-# first non-empty file wins whole; nothing printed means every section takes its default
-# (references/rules.md). Always exits 0.
+# of the checkout up to, not including, $HOME, else
+# ${XDG_CONFIG_HOME:-~/.config}/cc-things/planning/rules.md. The first non-empty file wins whole;
+# nothing printed means every section takes its default (references/rules.md). Always exits 0.
 set -u
 
 dir=$(git rev-parse --show-toplevel 2>/dev/null || pwd)

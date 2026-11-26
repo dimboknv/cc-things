@@ -2,8 +2,8 @@
 # Stages the named paths and commits the index as it stands. The commit takes no pathspec, so the
 # hooks run against the real index and a file a pre-commit hook stages lands in the commit; a
 # path-scoped commit runs them on a temporary index and what they stage never reaches the real one.
-# Before committing, the index must hold exactly the named paths: another session's staged work
-# never rides along.
+# Before staging, the index must hold nothing but the named paths: another session's staged work
+# never rides along, and a refusal stages nothing.
 #
 # usage: commit.sh <message> <path>...
 #   message   the whole commit message as one argument, subject first, trailers last
@@ -34,8 +34,6 @@ for path in "$@"; do
   literal+=(":(literal)$path")
 done
 
-git add -- "${literal[@]}"
-
 staged="$(git diff --cached --name-only --no-renames | sort)"
 named="$(git diff --cached --name-only --no-renames -- "${literal[@]}" | sort)"
 if [ "$staged" != "$named" ]; then
@@ -44,6 +42,8 @@ if [ "$staged" != "$named" ]; then
   echo "unstage them with 'git restore --staged -- <path>' or name them, then run again" >&2
   exit 1
 fi
+
+git add -- "${literal[@]}"
 
 # The pre-commit hooks build and lint. Under EXEC_PLAN_JOURNAL they use the run's caches; without
 # it cache.sh sets nothing and the environment stays as it was.

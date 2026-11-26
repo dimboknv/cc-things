@@ -202,14 +202,33 @@ def waves_left(tasks: dict[int, dict]) -> int:
     return max((of(n, frozenset()) for n in tasks), default=0)
 
 
+def wave_tasks(listed: str) -> list[int]:
+    """wave_tasks reads the task numbers of a wave line, `1, 2, 3`; a repository or a title after
+    each number, `1 (lib), 2 (app)` or `1: title`, is passed over.
+
+    A list with no repository and no title is read for every number, whatever separates them. A
+    number inside a title is not a task: a task number opens the list or follows a comma, and a
+    colon, a comma or the end comes after it."""
+    if ":" not in listed and "(" not in listed:
+        return [int(n) for n in re.findall(r"\d+", listed)]
+    bare = re.sub(r"\([^)]*\)", "", listed)
+    return [int(n) for n in re.findall(r"(?:^|,)\s*(\d+)(?=\s*(?:[:,]|$))", bare)]
+
+
 KINDS = [
     ("lane", re.compile(r"You are executing ONE task of a plan")),
-    ("integrate", re.compile(r"Every lane of wave (\d+)?\w* ?of a plan run has ended")),
+    (
+        "integrate",
+        re.compile(
+            r"Every lane of wave (\d+)?\w*(?: review)? ?of a plan run has ended"
+        ),
+    ),
     ("check", re.compile(r"Every task of a plan is done")),
     (
         "fixer",
         re.compile(
-            r"You are sorting and fixing what review round ((?:[\w.-]+/)?\d+-[a-z-]+)?"
+            r"You are sorting and fixing what review round "
+            r"((?:[\w.-]+/)?\d+-[a-z-]+|wave \d+, peer(?:, [\w.-]+)?)?"
         ),
     ),
     ("finalize", re.compile(r"You are closing a plan run")),
@@ -373,7 +392,9 @@ def agents(journal: Path, since: datetime) -> list[dict]:
                 prompt = "".join(head)
                 if not named.search(prompt):
                     continue
-                entry = json.loads(head[0])
+                started = local(json.loads(head[0]).get("timestamp"))
+                if started is None:
+                    continue
                 kind, hit = next(
                     ((k, m) for k, rx in KINDS if (m := rx.search(prompt))),
                     ("other", None),
@@ -410,7 +431,7 @@ def agents(journal: Path, since: datetime) -> list[dict]:
                 if kind == "integrate" and hit.group(1)
                 else None,
                 "round": named_round,
-                "started": local(entry["timestamp"]),
+                "started": started,
                 **read,
             }
         )
@@ -483,7 +504,11 @@ def sessions(journal: Path, plan: str, since: datetime, until: datetime) -> list
 
 # a round is named <repo>/<run>: revmux runs once per repository
 ROUND = re.compile(r"^review round ([^/\s]+/\d+-[a-z-]+?)(?: fixer)?: (.*)$")
-SORTED = re.compile(r"^review ([^/\s]+/\d+-[a-z-]+)(?:, profile \w+)?: (.*)$")
+SORTED = re.compile(r"^review ([^/\s]+/\d+-[a-z-]+)(?:, profile [\w-]+)?: (.*)$")
+# what the fixer of a wave the peer reviewed did, per repository in a run of several
+PEER_SORTED = re.compile(r"^review wave (\d+), peer(?:, ([^:\s]+))?: (.*)$")
+# a review lane the integrator merged; a lane recut after a merge logs again with its own tip
+PEER_MERGED = re.compile(r"^review wave (\d+): merged(?:, ([^,\s]+)(?:, \S+)?)?\s*$")
 FOUND = re.compile(r"(\d+) critical, (\d+) major, (\d+) minor(?:, degraded none)?,? ?")
 
 
@@ -618,6 +643,7 @@ def collect(jdir: Path, now: datetime) -> dict:
     reports: dict[int, list[datetime]] = {}
     phase = "started"
     verdict: dict[str, bool] = {}
+    checked: set[str] = set()
     stop_line = ""
     resumed = datetime.min
 
@@ -632,9 +658,8 @@ def collect(jdir: Path, now: datetime) -> dict:
             cut(at)
             if stop_line:
                 stop_line, resumed = "", at
-            numbers = [int(n) for n in re.findall(r"\d+", m.group(2).split("(")[0])]
             waves[int(m.group(1))] = {
-                "tasks": numbers,
+                "tasks": wave_tasks(m.group(2)),
                 "started": at,
                 "ended": None,
                 "note": "",
@@ -658,12 +683,25 @@ def collect(jdir: Path, now: datetime) -> dict:
             phase, stop_line = "stopped", text
         elif text.startswith("run continued"):
             phase, stop_line, resumed = "continued", "", at
+            # a continuation checks every repository again before the review
+            verdict.clear()
+            checked.clear()
         elif m := CHECK_START.match(text):
+            checked.add(m.group(1))
             phase = f"whole-tree check, {m.group(1)}"
         elif m := CHECK_DONE.match(text):
             verdict[m.group(1)] = m.group(2).startswith("green")
-            # the review follows once the last check of every repository of the run is green
-            names = [r["name"] for r in repos] or list(verdict)
+            # The review follows once the last check of every repository of the run is green. A
+            # repository no wave ran a task of holds only the plan's commits and is never checked.
+            worked = {
+                tasks[t]["repo"] or home
+                for w in waves.values()
+                for t in w["tasks"]
+                if t in tasks
+            }
+            names = [
+                r["name"] for r in repos if r["name"] in worked or r["name"] in checked
+            ] or list(verdict)
             if all(verdict.get(n) for n in names):
                 phase = "whole tree green, review next"
             elif verdict[m.group(1)]:
@@ -679,7 +717,9 @@ def collect(jdir: Path, now: datetime) -> dict:
         (n for n in sorted(waves, reverse=True) if waves[n]["ended"] is None), None
     )
     in_lane = set(waves[running]["tasks"]) if running is not None else set()
-    if running is not None and phase == f"wave {running}":
+    # a light run has one executor and no integrator
+    light = any(text.startswith("light run:") for _, text in journal)
+    if running is not None and phase == f"wave {running}" and not light:
         back = sum(
             1
             for n in in_lane
@@ -729,7 +769,7 @@ def collect(jdir: Path, now: datetime) -> dict:
             for at in reports.get(t, [])
             if wave["started"] <= at <= end
         ]
-        wave["merging"] = max(back) if back and not wave["live"] else None
+        wave["merging"] = max(back) if back and not wave["live"] and not light else None
 
     # A run with a peer keeps the peer's findings on a wave beside the journal.
     review = jdir / "review"
@@ -741,6 +781,34 @@ def collect(jdir: Path, now: datetime) -> dict:
         except (OSError, ValueError, AttributeError, TypeError):
             if any(text.startswith(f"review wave {n}: sent") for _, text in journal):
                 wave["peer"] = "asked, no answer yet"
+        # a fixer run again after the owner's answer logs again: its last line counts
+        fixed = {
+            m.group(2) or "": counts
+            for _, text in journal
+            if (m := PEER_SORTED.match(text))
+            and int(m.group(1)) == n
+            and (counts := sorted_out(m.group(3)))
+        }
+        done = [
+            (f"{repo}: " if repo else "") + ", ".join(f"{k} {v}" for k, v in c.items())
+            for repo, c in fixed.items()
+        ]
+        merged = [
+            m.group(2) or ""
+            for _, text in journal
+            if (m := PEER_MERGED.match(text)) and int(m.group(1)) == n
+        ]
+        if merged:
+            into = ", ".join(dict.fromkeys(r for r in merged if r))
+            done.append("merged" + (f" in {into}" if into else ""))
+        if done:
+            wave["peer"] = "; ".join([wave["peer"] or "", *done]).lstrip("; ")
+        wave["peer_fixers"] = [
+            a
+            for a in spent
+            if a["kind"] == "fixer"
+            and re.match(rf"wave {n}, peer\b", a["round"] or "")
+        ]
 
     over = journal[-1][0] if phase in ("closed", "stopped") else now
     own = sessions(jdir, Path(plan_path).name, journal[0][0], over)
@@ -1082,11 +1150,23 @@ def render(run: dict, now: datetime) -> str:
             )
             if not done:
                 out.append(doing(mergers, 11))
-        if wave["peer"]:
+        solo = [a for a in wave["agents"] if a["kind"] == "lane" and a["task"] is None]
+        if solo:
+            # the one executor of a light run works in the run worktree, a checkout of no lane
+            live = not wave["ended"]
+            out.append(
+                f"<tr class='part'><td></td><td>executor</td><td></td><td></td>"
+                f"<td class='num'>{took(0, wave['started']) if live else span(wave['started'], wave['ended'])}</td>"
+                f"{agent_cells(solo)}<td class='dim'>{'running' if live else ''}</td></tr>"
+            )
+            if live:
+                out.append(doing(solo, 11))
+        if wave["peer"] or wave["peer_fixers"]:
             out.append(
                 "<tr class='part'><td></td><td>peer</td>"
-                + "<td></td>" * 8
-                + f"<td class='dim'>{esc(wave['peer'])}</td></tr>"
+                + "<td></td>" * 3
+                + agent_cells(wave["peer_fixers"])
+                + f"<td class='dim'>{esc(wave['peer'] or '')}</td></tr>"
             )
     for n in sorted({r["planned"] for r in rows if r["planned"]}):
         out.append(

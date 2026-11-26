@@ -150,207 +150,214 @@ const svgEl = (tag, attrs, text) => {
   return e;
 };
 
-const root = document.querySelector('#src [data-place]');
-const rolesSrc = root.querySelector('script[data-roles]');
-const ROLES = rolesSrc ? JSON.parse(rolesSrc.textContent) : {};
-for (const r of Object.values(ROLES)) r.w = r.w || Math.max(70, r.label.length * 7 + 18);
-const box = Object.values(ROLES).reduce((b, r) => [Math.max(b[0], r.x + r.w + 46), Math.max(b[1], r.y + H + 6)], [0, 0]);
-
-function edgePoint(a, b) {
-  const cx = a.x + a.w / 2, cy = a.y + H / 2, dx = b.x + b.w / 2 - cx, dy = b.y + H / 2 - cy;
-  const t = Math.min(dx ? (a.w / 2 + 3) / Math.abs(dx) : Infinity, dy ? (H / 2 + 3) / Math.abs(dy) : Infinity);
-  return [cx + dx * t, cy + dy * t];
-}
-function drawFlow(flow) {
-  const svg = svgEl('svg', {viewBox: `0 0 ${box[0]} ${box[1]}`, width: box[0] * 1.6, role: 'img'});
-  for (const [from, to, kind, num] of flow.edges || []) {
-    const [x1, y1] = edgePoint(ROLES[from], ROLES[to]), [x2, y2] = edgePoint(ROLES[to], ROLES[from]);
-    svg.append(svgEl('line', {class: `edge ${kind || ''}`, x1, y1, x2, y2}));
-    if (num) {
-      const g = svgEl('g', {class: `num ${kind || ''}`});
-      g.append(svgEl('circle', {cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, r: 8}),
-        svgEl('text', {x: (x1 + x2) / 2, y: (y1 + y2) / 2 + 3.5, 'text-anchor': 'middle'}, num));
-      svg.append(g);
-    }
-  }
-  for (const [id, kind] of Object.entries(flow.nodes || {})) {
-    const r = ROLES[id], g = svgEl('g', {class: `node ${kind || ''}`});
-    g.append(svgEl('rect', {x: r.x, y: r.y, width: r.w, height: H, rx: 6}),
-      svgEl('text', {x: r.x + r.w / 2, y: r.y + H / 2 + 4, 'text-anchor': 'middle'}, r.label));
-    if (kind === 'new') g.append(svgEl('text', {class: 'tag', x: r.x + r.w + 5, y: r.y + H / 2 + 3}, 'НОВОЕ'));
-    svg.append(g);
-  }
-  return svg;
-}
-root.querySelectorAll('script[data-flow]').forEach(s => {
-  const fig = el('figure'); fig.style.margin = 0;
-  fig.append(drawFlow(JSON.parse(s.textContent)));
-  s.replaceWith(fig);
-});
-
-// the picture of a block is its first element when that is a figure or an svg
-function split(node) {
-  const first = node.firstElementChild, pic = el('div', 'pic'), body = el('div', 'body');
-  const hasPic = first && (first.tagName === 'FIGURE' || first.tagName.toLowerCase() === 'svg');
-  const wide = hasPic && first.classList.contains('diagram');
-  if (hasPic) pic.append(first);
-  body.append(...node.childNodes);
-  return {pic: hasPic ? pic : null, body, wide};
-}
-const comment = (key, placeholder) => { const t = el('textarea'); t.dataset.c = key; t.placeholder = placeholder; return t; };
-const card = (id, head) => {
-  const c = el('article', 'opt'); c.dataset.id = id; c.tabIndex = 0; c.setAttribute('role', 'button');
-  head.append(el('span', 'mark', 'выбрано'));
-  c.append(head);
-  return c;
-};
-
-const page = document.getElementById('page');
-document.title = `Развилка ${root.dataset.place}: ${root.dataset.title}`;
-page.append(el('div', 'eyebrow', `Развилка ${root.dataset.place}`), el('h1', '', root.dataset.title));
-
-const todaySrc = root.querySelector('[data-today]');
-if (todaySrc) {
-  const {pic, body, wide} = split(todaySrc);
-  const today = el('section', 'today' + (pic ? '' : ' nopic') + (wide ? ' wide' : ''));
-  // a diagram-design drawing marks new and gone in its own palette and carries its own legend
-  if (!wide) {
-    const legend = el('div', 'legend');
-    for (const [cls, text] of [['', 'как сегодня'], ['new', 'появляется'], ['gone', 'уходит']]) {
-      const s = el('span'); s.append(el('i', cls), text); legend.append(s);
-    }
-    body.append(legend);
-  }
-  body.append(comment('today', 'Комментарий к «как сегодня»: что здесь не так'));
-  if (pic) today.append(pic);
-  today.append(body);
-  page.append(el('div', 'sec', 'Как сегодня'), today);
-}
-
-const names = {own: 'свой вариант', explain: 'объяснить проще'};
-const keys = {};
-const opts = el('div', 'opts');
-[...root.querySelectorAll('[data-option]')].forEach((src, i) => {
-  const id = src.dataset.option, key = String(i + 1);
-  names[id] = `${key}. ${src.dataset.title}`; keys[key] = id;
-  const head = el('header');
-  head.append(el('span', 'key', key), el('h3', '', src.dataset.title));
-  if (src.hasAttribute('data-recommended')) head.append(el('span', 'badge', 'рекомендую'));
-  const {pic, body, wide} = split(src), act = el('div', 'act');
-  act.append(comment(id, 'Комментарий к этому варианту'));
-  body.append(act);
-  const inner = el('div', 'split');
-  if (pic) inner.append(pic);
-  inner.append(body);
-  const c = card(id, head);
-  if (wide) c.classList.add('wide');
-  c.append(inner);
-  opts.append(c);
-});
-page.append(el('div', 'sec', 'Варианты'), opts);
-
-// columns only while every option fits in one row at a readable width; a ragged second row breaks the comparison
-const COLUMN_MIN = 330;
-function layout() {
-  const n = opts.children.length;
-  opts.style.setProperty('--n', n);
-  const fits = page.clientWidth >= n * COLUMN_MIN + (n - 1) * 16;
-  // a fork with a diagram-design drawing always shows rows: a column squeezes it unreadable
-  const wide = !!page.querySelector('figure.diagram');
-  page.classList.toggle('rows', root.dataset.layout === 'rows' || wide || !fits);
-}
-layout();
-addEventListener('resize', layout);
-
-const others = el('div', 'others');
-for (const [id, title, ph] of [['own', 'Свой вариант', 'Опиши, как сделал бы ты'],
-  ['explain', 'Не понял, объясни проще', 'Что именно непонятно']]) {
-  const head = el('header'); head.append(el('h3', '', title));
-  const act = el('div', 'act'); act.append(comment(id, ph));
-  const c = card(id, head);
-  c.append(act); others.append(c);
-}
-page.append(others);
-
-const rejectedSrc = [...root.querySelectorAll('[data-rejected]')];
-if (rejectedSrc.length) {
-  const box = el('details', 'rejected');
-  box.append(el('summary', '', `Рассмотрено и отсеяно: ${rejectedSrc.length}`));
-  for (const src of rejectedSrc) {
-    const row = el('label'), check = el('input'), text = el('div'), why = el('span');
-    check.type = 'checkbox'; check.dataset.reopen = src.dataset.rejected;
-    why.append(...src.childNodes);
-    text.append(el('b', '', src.dataset.title), why, el('span', 'hint', ' — отметь, чтобы вернуть в обсуждение'));
-    row.append(check, text); box.append(row);
-  }
-  page.append(box);
-}
-document.getElementById('hint').textContent = `клик по карточке или 1–${Object.keys(keys).length} выбирает · ⌘↵ отправить`;
-
-let choice = null;
-function select(id, keep) {
-  choice = !keep && choice === id ? null : id;
-  document.querySelectorAll('.opt').forEach(card => {
-    const on = card.dataset.id === choice;
-    card.classList.toggle('sel', on);
-    card.setAttribute('aria-pressed', on);
-  });
-  const state = document.getElementById('state');
-  state.textContent = '';
-  if (choice) state.append('Выбрано: ', el('b', '', names[choice]));
-  else state.append('Ничего не выбрано. Можно отправить и одни комментарии.');
-  save();
-}
-function answer() {
-  const comments = {};
-  document.querySelectorAll('textarea[data-c]').forEach(t => { if (t.value.trim() && t.dataset.c !== 'general') comments[t.dataset.c] = t.value.trim(); });
-  const reopen = [...document.querySelectorAll('input[data-reopen]:checked')].map(c => c.dataset.reopen);
-  return {place: root.dataset.place, choice, comments, general: document.getElementById('general').value.trim(), reopen};
-}
-
 // a theme change reloads the page; the draft has to survive it
 const DRAFT = 'fork-draft:' + location.pathname;
-function save() {
-  const draft = {choice, text: {}, reopen: answer().reopen};
-  document.querySelectorAll('textarea[data-c]').forEach(t => { draft.text[t.dataset.c] = t.value; });
-  try { localStorage.setItem(DRAFT, JSON.stringify(draft)); } catch (e) { /* storage may be off */ }
-}
-function restore() {
-  let draft = null;
-  try { draft = JSON.parse(localStorage.getItem(DRAFT)); } catch (e) { /* no draft */ }
-  if (!draft) return select(null, true);
-  document.querySelectorAll('textarea[data-c]').forEach(t => { t.value = draft.text[t.dataset.c] || ''; });
-  document.querySelectorAll('input[data-reopen]').forEach(c => { c.checked = (draft.reopen || []).includes(c.dataset.reopen); });
-  select(names[draft.choice] ? draft.choice : null, true);
-}
 const forget = () => { try { localStorage.removeItem(DRAFT); } catch (e) { /* storage may be off */ } };
-
 function fail(e) { document.getElementById('err').textContent = String(e && e.message || e); }
-function send() {
-  const value = JSON.stringify(answer());
-  if (!window.agterm) return fail('вне agterm, ответ был бы таким:\n' + value);
-  agterm.request('session.overlay.submit', {args: {value}}).then(forget).catch(fail);
-}
 function cancel() {
   if (!window.agterm) return fail('вне agterm: отмена');
   agterm.request('session.overlay.close', {}).then(forget).catch(fail);
 }
-// a click that ends a text selection or lands in a comment field is not a pick
-document.addEventListener('click', e => {
-  const c = e.target.closest('.opt');
-  if (!c || e.target.closest('textarea, input, a') || String(getSelection())) return;
-  select(c.dataset.id);
-});
-document.addEventListener('input', save);
-document.getElementById('send').addEventListener('click', send);
+// Cancel is wired before the fragment is drawn, so a fragment that breaks the drawing
+// still leaves the owner a way to close the page
 document.getElementById('cancel').addEventListener('click', cancel);
-document.addEventListener('keydown', e => {
-  if (e.metaKey && e.key === 'Enter') { e.preventDefault(); return send(); }
-  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey || e.altKey) return;
-  if (keys[e.key]) return select(keys[e.key]);
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('opt')) { e.preventDefault(); select(e.target.dataset.id); }
-});
-restore();
+
+try {
+  const root = document.querySelector('#src [data-place]');
+  const rolesSrc = root.querySelector('script[data-roles]');
+  const ROLES = rolesSrc ? JSON.parse(rolesSrc.textContent) : {};
+  for (const r of Object.values(ROLES)) r.w = r.w || Math.max(70, r.label.length * 7 + 18);
+  const box = Object.values(ROLES).reduce((b, r) => [Math.max(b[0], r.x + r.w + 46), Math.max(b[1], r.y + H + 6)], [0, 0]);
+
+  function edgePoint(a, b) {
+    const cx = a.x + a.w / 2, cy = a.y + H / 2, dx = b.x + b.w / 2 - cx, dy = b.y + H / 2 - cy;
+    const t = Math.min(dx ? (a.w / 2 + 3) / Math.abs(dx) : Infinity, dy ? (H / 2 + 3) / Math.abs(dy) : Infinity);
+    return [cx + dx * t, cy + dy * t];
+  }
+  function drawFlow(flow) {
+    const svg = svgEl('svg', {viewBox: `0 0 ${box[0]} ${box[1]}`, width: box[0] * 1.6, role: 'img'});
+    for (const [from, to, kind, num] of flow.edges || []) {
+      const [x1, y1] = edgePoint(ROLES[from], ROLES[to]), [x2, y2] = edgePoint(ROLES[to], ROLES[from]);
+      svg.append(svgEl('line', {class: `edge ${kind || ''}`, x1, y1, x2, y2}));
+      if (num) {
+        const g = svgEl('g', {class: `num ${kind || ''}`});
+        g.append(svgEl('circle', {cx: (x1 + x2) / 2, cy: (y1 + y2) / 2, r: 8}),
+          svgEl('text', {x: (x1 + x2) / 2, y: (y1 + y2) / 2 + 3.5, 'text-anchor': 'middle'}, num));
+        svg.append(g);
+      }
+    }
+    for (const [id, kind] of Object.entries(flow.nodes || {})) {
+      const r = ROLES[id], g = svgEl('g', {class: `node ${kind || ''}`});
+      g.append(svgEl('rect', {x: r.x, y: r.y, width: r.w, height: H, rx: 6}),
+        svgEl('text', {x: r.x + r.w / 2, y: r.y + H / 2 + 4, 'text-anchor': 'middle'}, r.label));
+      if (kind === 'new') g.append(svgEl('text', {class: 'tag', x: r.x + r.w + 5, y: r.y + H / 2 + 3}, 'НОВОЕ'));
+      svg.append(g);
+    }
+    return svg;
+  }
+  root.querySelectorAll('script[data-flow]').forEach(s => {
+    const fig = el('figure'); fig.style.margin = 0;
+    fig.append(drawFlow(JSON.parse(s.textContent)));
+    s.replaceWith(fig);
+  });
+
+  // the picture of a block is its first element when that is a figure or an svg
+  function split(node) {
+    const first = node.firstElementChild, pic = el('div', 'pic'), body = el('div', 'body');
+    const hasPic = first && (first.tagName === 'FIGURE' || first.tagName.toLowerCase() === 'svg');
+    const wide = hasPic && first.classList.contains('diagram');
+    if (hasPic) pic.append(first);
+    body.append(...node.childNodes);
+    return {pic: hasPic ? pic : null, body, wide};
+  }
+  const comment = (key, placeholder) => { const t = el('textarea'); t.dataset.c = key; t.placeholder = placeholder; return t; };
+  const card = (id, head) => {
+    const c = el('article', 'opt'); c.dataset.id = id; c.tabIndex = 0; c.setAttribute('role', 'button');
+    head.append(el('span', 'mark', 'выбрано'));
+    c.append(head);
+    return c;
+  };
+
+  const page = document.getElementById('page');
+  document.title = `Развилка ${root.dataset.place}: ${root.dataset.title}`;
+  page.append(el('div', 'eyebrow', `Развилка ${root.dataset.place}`), el('h1', '', root.dataset.title));
+
+  const todaySrc = root.querySelector('[data-today]');
+  if (todaySrc) {
+    const {pic, body, wide} = split(todaySrc);
+    const today = el('section', 'today' + (pic ? '' : ' nopic') + (wide ? ' wide' : ''));
+    // a diagram-design drawing marks new and gone in its own palette and carries its own legend
+    if (!wide) {
+      const legend = el('div', 'legend');
+      for (const [cls, text] of [['', 'как сегодня'], ['new', 'появляется'], ['gone', 'уходит']]) {
+        const s = el('span'); s.append(el('i', cls), text); legend.append(s);
+      }
+      body.append(legend);
+    }
+    body.append(comment('today', 'Комментарий к «как сегодня»: что здесь не так'));
+    if (pic) today.append(pic);
+    today.append(body);
+    page.append(el('div', 'sec', 'Как сегодня'), today);
+  }
+
+  const names = {own: 'свой вариант', explain: 'объяснить проще'};
+  const keys = {};
+  const opts = el('div', 'opts');
+  [...root.querySelectorAll('[data-option]')].forEach((src, i) => {
+    const id = src.dataset.option, key = String(i + 1);
+    names[id] = `${key}. ${src.dataset.title}`; keys[key] = id;
+    const head = el('header');
+    head.append(el('span', 'key', key), el('h3', '', src.dataset.title));
+    if (src.hasAttribute('data-recommended')) head.append(el('span', 'badge', 'рекомендую'));
+    const {pic, body, wide} = split(src), act = el('div', 'act');
+    act.append(comment(id, 'Комментарий к этому варианту'));
+    body.append(act);
+    const inner = el('div', 'split');
+    if (pic) inner.append(pic);
+    inner.append(body);
+    const c = card(id, head);
+    if (wide) c.classList.add('wide');
+    c.append(inner);
+    opts.append(c);
+  });
+  page.append(el('div', 'sec', 'Варианты'), opts);
+
+  // columns only while every option fits in one row at a readable width; a ragged second row breaks the comparison
+  const COLUMN_MIN = 330;
+  function layout() {
+    const n = opts.children.length;
+    opts.style.setProperty('--n', n);
+    const fits = page.clientWidth >= n * COLUMN_MIN + (n - 1) * 16;
+    // a fork with a diagram-design drawing always shows rows: a column squeezes it unreadable
+    const wide = !!page.querySelector('figure.diagram');
+    page.classList.toggle('rows', root.dataset.layout === 'rows' || wide || !fits);
+  }
+  layout();
+  addEventListener('resize', layout);
+
+  const others = el('div', 'others');
+  for (const [id, title, ph] of [['own', 'Свой вариант', 'Опиши, как сделал бы ты'],
+    ['explain', 'Не понял, объясни проще', 'Что именно непонятно']]) {
+    const head = el('header'); head.append(el('h3', '', title));
+    const act = el('div', 'act'); act.append(comment(id, ph));
+    const c = card(id, head);
+    c.append(act); others.append(c);
+  }
+  page.append(others);
+
+  const rejectedSrc = [...root.querySelectorAll('[data-rejected]')];
+  if (rejectedSrc.length) {
+    const box = el('details', 'rejected');
+    box.append(el('summary', '', `Рассмотрено и отсеяно: ${rejectedSrc.length}`));
+    for (const src of rejectedSrc) {
+      const row = el('label'), check = el('input'), text = el('div'), why = el('span');
+      check.type = 'checkbox'; check.dataset.reopen = src.dataset.rejected;
+      why.append(...src.childNodes);
+      text.append(el('b', '', src.dataset.title), why, el('span', 'hint', ' — отметь, чтобы вернуть в обсуждение'));
+      row.append(check, text); box.append(row);
+    }
+    page.append(box);
+  }
+  document.getElementById('hint').textContent = `клик по карточке или 1–${Object.keys(keys).length} выбирает · ⌘↵ отправить`;
+
+  let choice = null;
+  function select(id, keep) {
+    choice = !keep && choice === id ? null : id;
+    document.querySelectorAll('.opt').forEach(card => {
+      const on = card.dataset.id === choice;
+      card.classList.toggle('sel', on);
+      card.setAttribute('aria-pressed', on);
+    });
+    const state = document.getElementById('state');
+    state.textContent = '';
+    if (choice) state.append('Выбрано: ', el('b', '', names[choice]));
+    else state.append('Ничего не выбрано. Можно отправить и одни комментарии.');
+    save();
+  }
+  function answer() {
+    const comments = {};
+    document.querySelectorAll('textarea[data-c]').forEach(t => { if (t.value.trim() && t.dataset.c !== 'general') comments[t.dataset.c] = t.value.trim(); });
+    const reopen = [...document.querySelectorAll('input[data-reopen]:checked')].map(c => c.dataset.reopen);
+    return {place: root.dataset.place, choice, comments, general: document.getElementById('general').value.trim(), reopen};
+  }
+
+  function save() {
+    const draft = {choice, text: {}, reopen: answer().reopen};
+    document.querySelectorAll('textarea[data-c]').forEach(t => { draft.text[t.dataset.c] = t.value; });
+    try { localStorage.setItem(DRAFT, JSON.stringify(draft)); } catch (e) { /* storage may be off */ }
+  }
+  function restore() {
+    let draft = null;
+    try { draft = JSON.parse(localStorage.getItem(DRAFT)); } catch (e) { /* no draft */ }
+    if (!draft) return select(null, true);
+    document.querySelectorAll('textarea[data-c]').forEach(t => { t.value = draft.text[t.dataset.c] || ''; });
+    document.querySelectorAll('input[data-reopen]').forEach(c => { c.checked = (draft.reopen || []).includes(c.dataset.reopen); });
+    select(names[draft.choice] ? draft.choice : null, true);
+  }
+
+  function send() {
+    const value = JSON.stringify(answer());
+    if (!window.agterm) return fail('вне agterm, ответ был бы таким:\n' + value);
+    agterm.request('session.overlay.submit', {args: {value}}).then(forget).catch(fail);
+  }
+  // a click that ends a text selection or lands in a comment field is not a pick
+  document.addEventListener('click', e => {
+    const c = e.target.closest('.opt');
+    if (!c || e.target.closest('textarea, input, a') || String(getSelection())) return;
+    select(c.dataset.id);
+  });
+  document.addEventListener('input', save);
+  document.getElementById('send').addEventListener('click', send);
+  document.addEventListener('keydown', e => {
+    if (e.metaKey && e.key === 'Enter') { e.preventDefault(); return send(); }
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (keys[e.key]) return select(keys[e.key]);
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('opt')) { e.preventDefault(); select(e.target.dataset.id); }
+  });
+  restore();
+} catch (e) {
+  fail('Развилка не отрисовалась: ' + String(e && e.message || e));
+}
 </script>
 </body>
 </html>

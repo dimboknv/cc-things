@@ -8,7 +8,8 @@
 #           name it
 #   trunk   the branch the run was cut from, as the Trunk section of the project rules names it
 #
-# Run inside that repository's run worktree. The base is the trunk commit the run's branch was cut
+# Run inside that repository's run worktree; a <repo> other than the directory name of the
+# checkout's main checkout is refused. The base is the trunk commit the run's branch was cut
 # from. A merge commit between the base and HEAD is refused, because the regroup flattens the
 # range, and so is a recorded base the tree no longer matches, because a rebase or a merge by hand
 # has moved what the run stands on.
@@ -37,6 +38,13 @@ case "$repo" in
 esac
 [ -n "$trunk" ] || refuse "empty trunk"
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || refuse "not inside a git work tree"
+here="$(basename "$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")")"
+if [ "$repo" != "$here" ]; then
+  # a submodule or a bare repository keeps its git directory away from its checkout: the main
+  # checkout, the first entry of the worktree list, names it
+  main="$(git worktree list --porcelain | sed -n '1s/^worktree //p')"
+  [ "$repo" = "$(basename "$main")" ] || refuse "this checkout is of the repository '$(basename "$main")', not '$repo'"
+fi
 git rev-parse --verify --quiet "$trunk^{commit}" >/dev/null || refuse "no branch '$trunk'"
 
 base="$(git merge-base "$trunk" HEAD)" || refuse "$trunk and HEAD share no commit"

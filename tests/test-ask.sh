@@ -67,6 +67,7 @@ check "the dialog is bound to AGTERM_SESSION_ID" passed --target SESSION-1
 check "the default item is checked" passed --checked none
 check "an item carries its subtitle" passed --choice-subtitle 'claude=a second session'
 check "the free line is offered" passed --other 'own words'
+check "the dialog says which key picks" grep -qF 'Space picks' "$STUB_ARGS"
 check "the free line prints its text" \
   answers '{"result":"answered","id":"ok","label":"OK","index":0,"selected":[],"text":"claude opus"}' 0 'text claude opus'
 check "Esc is no answer" no_answer '{"result":"escaped"}' 3

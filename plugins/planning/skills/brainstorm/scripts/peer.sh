@@ -57,6 +57,10 @@ command -v mailbox-chat.py >/dev/null || refuse "mailbox-chat.py is not on PATH"
 claude_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 grep -qs 'mailbox-chat.py claude-hook' "$claude_dir/settings.json" .claude/settings.json .claude/settings.local.json \
   || refuse "no 'mailbox-chat.py claude-hook' in $claude_dir/settings.json: the lead is not wired for mailbox-chat"
+# The lead and the Claude peer load the skill as their first step; without it the chat breaks on
+# the first mail instead of here.
+[ -f "$claude_dir/skills/mailbox-chat/SKILL.md" ] || [ -f .claude/skills/mailbox-chat/SKILL.md ] \
+  || refuse "no mailbox-chat skill under $claude_dir/skills or .claude/skills: Claude would not know how to answer (agterm cookbook, two-agent-mailbox-chat, Setup)"
 if [ "$kind" = codex ]; then
   command -v codex >/dev/null || refuse "codex is not on PATH"
   codex_home="${CODEX_HOME:-$HOME/.codex}"

@@ -114,15 +114,16 @@ gives a task lane whose `Where:` names the areas the findings sit in, the instal
 `Environment` section and the linked ignored files, and launch one subagent in the background
 (the Agent tool, `general-purpose`) with the prompt of [`fixer.md`](fixer.md): `CHECKOUT` and
 `BRANCH` are the review lane's, `REPO` its repository, `PLAN` the plan and `JOURNAL` the
-journal, `BASE` that repository's base, `ROUND` is `wave N, peer`, `FINDINGS` the path
+journal, `BASE` that repository's base, `ROUND` is `wave N, peer, <repo>`, `FINDINGS` the path
 of `wave-<N>.json`. The fixer sorts only the findings of its repository. A reply that carries `stop:` is logged as
 `[owner] review wave N: the peer asks to stop, not verified: <the peer's words>`: this
 session reads no code, so the claim reaches the owner as the peer's. A reply that arrives
 after a stop report starts nothing: the continuation takes it.
 
 **The integrator.** `REVIEW` of [`integrate.md`](integrate.md) names
-every review lane whose fixer has ended with a commit and that the journal does not yet list
-as `review wave N: merged`, oldest first, each with its repository, and `REPOS` names the
+every review lane whose fixer has ended with a commit and whose repository and tip,
+`git rev-parse <branch>` there, no `review wave …: merged, <repo>, <tip>` line of the journal
+names, oldest first, each with its repository, and `REPOS` names the
 repository of each. A fixer still running is not waited for: its lane
 goes into the next integration. A review lane the fixer left without a commit is removed
 with its branch. A merged review lane is removed the way an integrated task lane is.
@@ -150,14 +151,24 @@ the peer found: it is the measure of the trial.
 
 A run whose journal holds `review/` is a run with a peer, whatever the request says, and its
 continuation asks nothing, as Step 1 says of a continuation: the peer is the one the request
-names, or Claude Code. Start it; no `plan` message is sent.
+names, or Claude Code. Start it, then send `plan` with the same fields as at the start and
+the last line `continuation, no reply needed`: the new peer learns the journal and the
+repositories from it, and the council is not held again. The session kept the start's
+commits in no file, so here the commit each repository is read at is the `HEAD` of its run
+branch, with the base its `base.<repo>` holds beside it, and the wave schedule is built as
+Step 1 builds it, over the tasks with an open `[ ]` alone.
 
-- A review lane that holds a commit and is not yet `merged` in the journal goes into the next
-  integration.
-- A `wave-<N>.json` with findings and no `review wave N, peer:` line of a fixer in the
-  journal gets its fixer.
-- A wave whose fixer logged `[owner] review wave N, peer` gets the fixer again, on the same
-  file and in the same lane, now that the plan holds the owner's answer.
+- A review lane that holds a commit and whose repository and tip no `merged` line of the
+  journal names goes into the next integration. A lane cut anew for a fixer run again has a
+  new tip, so it is merged though its wave already has a `merged` line.
+- A `wave-<N>.json` with findings and, for a repository its findings name, no
+  `review wave N, peer, <repo>:` line of a fixer in the journal gets its fixer there.
+- A wave whose fixer logged `[owner] review wave N, peer, <repo>`, `[blocker] review wave N,
+  peer, <repo>` or `[blocker] environment review wave N, peer, <repo>` gets the fixer again, on
+  the same file, now that the plan holds the owner's answer or the owner has cleared what held
+  the gate or repaired the host: in its review lane when that lane
+  still exists, else in one cut anew as "When the peer's reply arrives" says, since a merged
+  lane was removed before the stop.
 - A wave integrated with no findings file was not reviewed, and the run report says so.
 
 ## The end
@@ -175,23 +186,3 @@ round 1:   <n> critical, <n> major
 
 The last line is what tells the owner whether the peer paid for its cost: a plain run leaves
 two or three majors to the first round.
-
-## Common mistakes
-
-| Mistake | Fix |
-|---|---|
-| Wrote `notes.md` or made the `review/` directory before the go | After the `base.sh` of every repository; until then the notes sit in the scratchpad |
-| Waited for the peer before cutting the next wave | Send `wave N`, then the next pass at once |
-| Held the integrator for a fixer that still ran | Its lane goes into the next integration; only after the last wave is a fixer waited for |
-| Sent the peer the lead's own reading with `plan` | The plan, its commit and the schedule only |
-| Read the peer's `plan` reply before writing the lead's own list | The scratchpad first, in the turn that sends the request |
-| Put a point of the peer into `notes.md` unchecked | The lead's own read first |
-| Passed the peer's `stop:` to the owner as a checked fact | It is logged as the peer's words, not verified |
-| Asked the owner a council question after the go | With the go, or never: after it the run is silent |
-| Let the peer, or this session, fix a finding | The fixer subagent in a review lane |
-| Cut the review lane from the tip the wave ended on | From the run branch's `HEAD` when the findings arrive |
-| Started a fixer for a reply that came after a stop report | The continuation takes it |
-| Sent the review-only integration to the peer as a wave | Only a wave of tasks is sent |
-| Resent a message the mailbox refused | Log the deviation and go on as a plain run |
-| Skipped the first round on the first-round profile because the peer read every wave | It runs; its count of majors is the measure |
-| Continued a run that has `review/` in its journal as a plain run | It is a run with a peer: start the peer, then the review lanes and the findings files are taken up |

@@ -36,7 +36,7 @@ Paths, absolute, used as written:
 - plan: PLAN, read only
 - the branch: `git diff BASE...HEAD`, its commits `git log --oneline BASE..HEAD`
 - journal: JOURNAL. Every shell call that runs or sources a file of SCRIPTS sets it first,
-  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`: the scripts refuse without it
+  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh '<line>'`: the scripts refuse without it
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh
 - project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
   its heading; a section the file leaves out takes the default that
@@ -127,8 +127,9 @@ left in the validation line of the journal.
 
 ### Journal
 
-Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`, one call per line, never
-a redirect into the file:
+Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh '<line>'`, one call per line, never
+a redirect into the file. The line goes in single quotes, a single quote inside it written
+as `'\''`: in double quotes a backtick or a `$(…)` in the line runs as a command. The lines:
 
 - `whole tree: REPO: <green | red>, <n> fixes`, with `, light` after it when SCOPE is `light`
 - `- commits: <sha> <subject>`, one per commit

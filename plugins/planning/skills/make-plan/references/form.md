@@ -176,10 +176,6 @@ joins the plan with its price. Out of Scope holds what the owner chose to leave.
   conventions of a language for its code, a migration skill for a migration, the skill of a
   document's genre for that document. Most of the owner's remarks on a review are conventions,
   and the skills own them; the executor loads the skill of its task's surface before it edits.
-- **Shared resources**, when the plan is one line of a parallel wave: the table of files another
-  line of the same wave may touch, and the rule that serialises them (which line merges second
-  and carries its edit onto the first's form; generated output is regenerated, never merged by
-  hand).
 - **Mode**, present only for a light run, as the line `- **Mode.** light — <reason>`. The
   reason says why the whole work fits one executor, not how small the diff is. A plan may be
   light when all of these hold:
@@ -242,9 +238,9 @@ After: «the docs describe the system without the bulk export» (the code follow
   `docs/`, the decision records of the area. Not files. The refresh mode reads `git log` over
   these areas, and the executor finds the files. A rename or a removal names every surface its
   inventory runs over, the docs included when the `rg` covers them: a hit there is the task's
-  to remove. An area missing from `Where:` is one
-  the Shared files table cannot see, and it is where most edits outside `Where:` in past runs
-  landed. Every path in `Where:` is relative to the task's repository.
+  to remove, except in the plans directory, which the inventory excludes. An area missing from
+  `Where:` is one the Shared files table cannot see, and it is where most edits outside
+  `Where:` in past runs landed. Every path in `Where:` is relative to the task's repository.
 - **`Repo:`** The repository the task changes, on the line right after `Where:`, written like
   it: ``Repo: `billing-api`.`` The name is the repository's directory relative to the directory
   the session starts in. A task without the line belongs to the home repository. In an
@@ -277,8 +273,9 @@ After: «the docs describe the system without the bulk export» (the code follow
   tree could hold: the identifier's casings and its snake, kebab and camel forms, the JSON and
   proto field names, the word in English and in the plan's language, plurals; the surfaces it
   runs over, every top-level area that could hold the term, the docs and `.claude` included, as
-  the `Consumers` section names them; and the globs that exclude generated output. The acceptance is that inventory empty, or reporting only the
-  foreign meanings the plan names. A task that adds or changes something carries no inventory.
+  the `Consumers` section names them; and the globs that exclude generated output and the plans
+  directory, where this plan and the closed ones name the term. The acceptance is that inventory
+  empty, or reporting only the foreign meanings the plan names. A task that adds or changes something carries no inventory.
 - **Size.** A task ends with the tree building and the tests of the packages it touched green,
   because it ends in a commit and the hooks run on that commit; and it fits one session of one
   executor. After every wave the run's integrator merges the lanes, builds and lints the tree

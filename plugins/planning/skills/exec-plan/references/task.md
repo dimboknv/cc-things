@@ -22,10 +22,11 @@ runs in a fresh context and sees nothing of this session or of the other lanes.
 
 ## Prompt
 
-You are executing ONE task of a plan as one lane of a wave, unless WAVE below is the line
-`light run`: then you execute every task TASK lists, alone, and the section "A light run"
-says how. In a wave, the other lanes run the other tasks of WAVE beside you, each in its own
-worktree, some of them in other repositories, and none of you sees the others' edits until
+You are executing ONE task of a plan as one lane of a wave, unless the wave list below is the
+line `light run`: then you execute every task of the task list below, alone, and the section
+"A light run" says how. In a wave, the other lanes run the other tasks of the wave list beside
+you, each in its own worktree, some of them in other repositories, and none of you sees the
+others' edits until
 the run integrates the wave. Your worktree is the git checkout CHECKOUT on the branch
 BRANCH, in the repository REPO. No human is available: never ask a question, never pause for input, never call a tool that asks
 the user. You have no Agent tool: what you cannot do yourself you leave open, as "Stops" below
@@ -36,11 +37,12 @@ Paths, absolute, used as written:
 - checkout: CHECKOUT (run every command from here)
 - plan: PLAN, read only
 - your progress file: PROGRESS, the only file where you mark your task
-- your task: TASK
-- the tasks of this wave:
+- your task, the task list:
+TASK
+- the wave list, the tasks of this wave:
 WAVE
 - journal: JOURNAL. Every shell call that runs or sources a file of SCRIPTS sets it first,
-  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`: the scripts refuse without it
+  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh '<line>'`: the scripts refuse without it
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh
 - project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
   its heading; a section the file leaves out takes the default that
@@ -58,9 +60,9 @@ RETRY
 
 ### A light run
 
-When WAVE is the line `light run`, you are the only executor of the plan, CHECKOUT is the
-run's own worktree, PROGRESS is PLAN itself, and TASK lists every open task in the order to run
-them: their `After:`
+When the wave list is the line `light run`, you are the only executor of the plan, CHECKOUT
+is the run's own worktree, PROGRESS is PLAN itself, and the task list holds every open task in
+the order to run them: their `After:`
 lines first, file order breaking a tie. Close them one after another in that order: each is
 "your task" below in its turn, and ends in its own commit and its own journal block before the
 next starts. There is no integrator and no other lane: after you, the run's
@@ -69,9 +71,9 @@ the light mode: a reader or writer of a shape the plan changes that `## Contract
 does not name, a behaviour the plan does not choose, or a task that will not end green in this
 checkout. Commit what is complete and coherent, mark the open item `⚠️`, and log
 `[owner] light run outgrown: <what you found, what is done, what is left>`. A surface beyond
-`Where:` that the change reaches is not such a stop: gate it as "Do" says. A task of TASK
-that carries a `⚠️` from a stopped attempt is yours like any open one: close the item and
-remove the mark. When WAVE is anything else, skip this section.
+`Where:` that the change reaches is not such a stop: gate it as "Do" says. A task of the task
+list that carries a `⚠️` from a stopped attempt is yours like any open one: close the item and
+remove the mark. When the wave list is anything else, skip this section.
 
 ### Read first
 
@@ -207,8 +209,10 @@ Never write `[x] … skipped`, never tick a thing not done, never invent a resul
 
 ### Journal
 
-Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`, one call per line,
-never a redirect into the file. After the commit:
+Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh '<line>'`, one call per line,
+never a redirect into the file. The line goes in single quotes, a single quote inside it
+written as `'\''`: in double quotes a backtick or a `$(…)` in the line runs as a command. This
+holds for every line you log, the ones "Do" names too. After the commit:
 
 - `task N: <title>`
 - `- commits: <sha> <subject>`, one per commit
@@ -230,5 +234,5 @@ with its reason; any error you hit and how it ended. Nothing else, and under abo
 kilobytes: a longer report is cut on its way back, and the journal already holds the
 decisions, the deviations and the validation.
 
-ONE task per run, or in a light run every task of TASK, one after another. After the last
+ONE task per run, or in a light run every task of the task list, one after another. After the last
 commit and its journal, STOP.

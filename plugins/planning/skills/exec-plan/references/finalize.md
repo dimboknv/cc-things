@@ -28,13 +28,13 @@ tool.
 
 Paths, absolute, used as written:
 
-- the repositories, each with its run worktree, branch, base and trunk; every command of a
-  repository runs from its run worktree:
+- the repositories list, each repository with its run worktree, branch, base and trunk; every
+  command of a repository runs from its run worktree:
 REPOS
 - plan: PLAN, a MODE plan; in a tracked plan its run worktree is HOME
 - the close: OPEN → CLOSED
 - journal: JOURNAL. Every shell call that runs or sources a file of SCRIPTS sets it first,
-  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`: the scripts refuse without it
+  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh '<line>'`: the scripts refuse without it
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh
 - project rules: `bash RULES` from a repository's run worktree prints the rules of that
   repository, or nothing. A section is read by its heading; a section the file leaves out takes
@@ -59,8 +59,8 @@ PREFLIGHT
 
 Each branch's commits are the shape the work was executed in: one or more per task, the
 commits that marked the plan, then the fixes of the review rounds. The reader of the pull
-request reads it in another shape, by kind. Regroup every repository of REPOS, one after
-another, each from its own base, in its own run worktree:
+request reads it in another shape, by kind. Regroup every repository of the repositories list,
+one after another, each from its own base, in its own run worktree:
 
 1. `git status --porcelain` prints nothing. Anything printed is a stop:
    `[blocker] finalize: <repo>: dirty tree: <paths>`.
@@ -86,7 +86,10 @@ another, each from its own base, in its own run worktree:
    `[blocker] finalize: <repo>: the regroup lost <paths>`. The backup branch holds the tip.
 
 A stop in one repository leaves the repositories after it as they are and the plan where it
-is.
+is. A stop after the reset of step 3 leaves that branch part way, the rest of its changes
+uncommitted: do not put it back yourself. Name the backup branch in the `[blocker]` line and
+the report, since `git reset --hard backup/SLUG-<stamp>` in that run worktree is how the
+owner restores the tip before the run continues.
 
 The groups follow the project's commit rules, and where they say nothing: a semantic edit per
 component, a mechanical move, generated artifacts, a large documentation rewrite, each apart
@@ -120,8 +123,9 @@ status, no date, no note.
 
 ### Journal
 
-Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`, one call per line, never
-a redirect into the file:
+Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh '<line>'`, one call per line, never
+a redirect into the file. The line goes in single quotes, a single quote inside it written
+as `'\''`: in double quotes a backtick or a `$(…)` in the line runs as a command. The lines:
 
 - `finalize: <repo>: history <n> → <m> commits, backup/SLUG-<stamp>`, one per repository
 - `finalize: plan closed, CLOSED`, with CLOSED as the absolute path

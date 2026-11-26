@@ -66,7 +66,7 @@ the last line says what reply is expected and whether the lead waits for it, or
 
 | Tag | The lead sends | The peer returns |
 |---|---|---|
-| `frame` | The owner's words, word for word: the request, the answer to the frame question, and what the owner said earlier in the session that bears on it. The path of the lead's transcript. The path of the project rules file, from the `<!-- rules: … -->` line `rules.sh` printed, or that there is none. Nothing the lead read or concluded | Its own list of forks with the facts behind each, what the tree or a stated rule already settles, and the zero fork: the premise the frame stands on |
+| `frame` | The owner's words, word for word: the request, the answer to the frame question, and what the owner said earlier in the session that bears on it. The path of the lead's transcript, as [When the peer is gone](#when-the-peer-is-gone) finds it. The path of the project rules file, from the `<!-- rules: … -->` line `rules.sh` printed, or that there is none. Nothing the lead read or concluded | Its own list of forks with the facts behind each, what the tree or a stated rule already settles, and the zero fork: the premise the frame stands on |
 | `options` | The merged, numbered list of forks, and which of them to build now: every fork whose question does not depend on an answer still to come. No draft and no hint | One message per fork, as each is ready: its options, scenarios, prices and recommendation |
 | `clash N/M` | The lead's full draft of the fork as the owner would get it, for a fork page the path of its fragment file, and every difference from the peer's version | For each difference a concession or something new; the words and numbers of the draft checked; the attack on the recommendation |
 | `answer` | Every reply of the owner that is more than a pick, word for word, and the pick itself with the lead's restatement. The answer of a fork page goes as the JSON the page returned | Depends on what the reply is, below |
@@ -158,10 +158,19 @@ plain words, no paths, no type names.
 
 ## When the peer is gone
 
-A peer that crashed or lost its context to compaction is started again with `peer.sh`. The
-lead sends `frame` again with the path of its transcript, and the new peer takes the owner's
-replies from that file: they are the owner's words as typed, and no second record of them is
-kept.
+A peer that lost its context to compaction still listens: `peer.sh` run again mails it the
+brief and keeps it. A peer that crashed leaves its pane behind, and `peer.sh` refuses a split
+where nothing listens. The lead asks the owner to close the right pane, and runs `peer.sh`
+again once the owner says it is closed.
+
+Either way the lead then sends `frame` again with the path of its transcript, and the peer
+takes the owner's replies from that file: they are the owner's words as typed, and no second
+record of them is kept. The transcript is the one file this prints, the session id being the
+one [SKILL.md](SKILL.md) gives:
+
+```bash
+ls "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/projects/*/<session id>.jsonl
+```
 
 ## The end
 
@@ -178,18 +187,4 @@ for its cost.
 
 | Mistake | Fix |
 |---|---|
-| Sent the peer the lead's reading of the tree with `frame` | The owner's words, the transcript path and the rules path only |
-| Sent the lead's draft with the `options` request | The numbered list and which forks to build |
-| Read the peer's reply before writing the lead's own version | Write it to the scratchpad in the turn that sends the request |
-| Showed the owner a draft, or its "today" part, while the peer was still working | One line on what the peer was asked |
-| Skipped the clash because the two versions matched | The draft goes to the peer for every architectural fork |
-| Dropped the peer's option because the lead's own looked better | It stays unless a stated rule excludes it |
-| Passed the peer's fact to the owner unchecked | The lead's own read or grep first |
-| A label from the chat in the message to the owner | The thing in plain words |
-| «Пир согласен» in the message to the owner | The attack that was tried and what stopped it |
-| An open dispute given to the owner as two positions | One recommendation, the dispute, and the check that would settle it |
-| Made the owner wait for the peer on a question about what was said | Answer at once; the peer gets the question and the answer |
-| The owner's own option taken or refused without the peer | `answer`, and wait |
-| A fifth message on one fork | Two rounds per difference, four messages per fork |
 | Took the peer's agreement as a go to write a file or start a plan | Only the owner's answer is a go |
-| Reopened a settled fork because the peer's late mail disagreed | Tell the owner and ask |

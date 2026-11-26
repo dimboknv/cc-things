@@ -8,7 +8,7 @@ session or of the round.
 
 | Placeholder | Value |
 |---|---|
-| `CHECKOUT` | absolute path of the run worktree of the repository the round reviewed; in a run with a peer, the review lane's worktree |
+| `CHECKOUT` | absolute path of the run worktree of the repository the round reviewed; for the peer's findings on a wave, the review lane's worktree |
 | `BRANCH` | the branch name |
 | `REPO` | the directory name of that repository |
 | `PLAN` | absolute path of the plan, the one the journal's `plan` names |
@@ -16,7 +16,7 @@ session or of the round.
 | `SCRIPTS` | absolute path of the skill's `scripts/` in the plugin, `${CLAUDE_PLUGIN_ROOT}/skills/exec-plan/scripts` expanded |
 | `RULES` | absolute path of the plugin's `scripts/rules.sh`, `${CLAUDE_PLUGIN_ROOT}/scripts/rules.sh` expanded |
 | `BASE` | the base commit of that repository, the content of `<journal>/base.<repo>` |
-| `ROUND` | `<repo>/<run name>, profile <name>`, the round whose findings this run sorts; in a run with a peer, `wave N, peer` |
+| `ROUND` | `<repo>/<run name>, profile <name>`, the round whose findings this run sorts; for the peer's findings on a wave, `wave N, peer, <repo>` |
 | `FINDINGS` | absolute path of that round's `findings.json` in its round directory |
 | `PREFLIGHT` | the block Step 2 of the skill produced |
 
@@ -35,7 +35,7 @@ Paths, absolute, used as written:
 - the round's findings: FINDINGS
 - the branch: `git diff BASE...HEAD`, its commits `git log --oneline BASE..HEAD`
 - journal: JOURNAL. Every shell call that runs or sources a file of SCRIPTS sets it first,
-  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`: the scripts refuse without it
+  `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh '<line>'`: the scripts refuse without it
 - scripts: SCRIPTS/commit.sh and SCRIPTS/progress.sh
 - project rules: `bash RULES` from CHECKOUT prints them, or nothing. A section is read by
   its heading; a section the file leaves out takes the default that
@@ -102,11 +102,12 @@ with where; one they do not settle is a fork. `pre_existing` and `immaterial` ar
 sorted nor fixed: name them in the report.
 
 When FINDINGS holds no `critical` and no `major`, this run is the minor pass of a clean
-round, and two answers change, because a minor does not hold the branch. A minor whose fix
+round, and three answers change, because a minor does not hold the branch. A minor whose fix
 needs a choice is not a fork: nothing is changed for it, no `[owner]` is logged, and it is
 listed as open with the question in plain words and its options. A fix whose gate you cannot
 make green is undone and its finding listed as open with the cause, and no `[blocker]` is
-logged.
+logged. An open question the plan and the tree do not settle is not a fork either: no
+`[owner]`, and it goes into the report as open, with the question and its options.
 
 ### Fix
 
@@ -131,8 +132,8 @@ logged.
   green on a fix: undo that fix, leave its finding open, and log
   `[blocker] review ROUND: <reason>`. When it is red for a reason outside the tree, Docker
   gone, the disk full, a stand that does not come up, undo the fix the same way and log
-  `[blocker] environment review ROUND: <reason>`: the owner repairs it, and the continuation
-  gives you the same findings again.
+  `[blocker] environment review ROUND: <reason>`: the owner repairs it. After either
+  `[blocker]`, the continuation gives you the same findings again.
 - A check you add is seen failing once before it counts: break what it guards, watch it go
   red, restore.
 - PLAN is not edited: no tick, no note. A finding that needs the plan changed is a fork.
@@ -147,8 +148,9 @@ logged.
 
 ### Journal
 
-Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh "<line>"`, one call per line, never
-a redirect into the file. After the commit:
+Only through `EXEC_PLAN_JOURNAL=JOURNAL SCRIPTS/progress.sh '<line>'`, one call per line, never
+a redirect into the file. The line goes in single quotes, a single quote inside it written
+as `'\''`: in double quotes a backtick or a `$(…)` in the line runs as a command. After the commit:
 
 - `review ROUND: fixed <n>, open <n>, dropped <n>, forks <n>`
 - `- commits: <sha> <subject>`, one per commit

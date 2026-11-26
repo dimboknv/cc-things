@@ -32,20 +32,17 @@ none of it. A session without a peer is plain and does not read that file.
 
 The skill directory is `${CLAUDE_PLUGIN_ROOT}/skills/brainstorm`. Where [page.md](page.md) and
 [with-peer.md](with-peer.md) name a script or a file of the skill directory, the lead runs or
-passes it by this absolute path.
+passes it by this absolute path. This session's id is `${CLAUDE_SESSION_ID}`; with-peer.md
+finds the lead's transcript by it.
 
 ## The run
 
-0. **The peer.** One question, asked first and alone, unless the request already answers it
-   or the session is not in agterm, where no peer can run. Three answers, each with what it
-   costs: no peer, the session as this file describes it, which a bare «ок» means; Claude
-   Code, a second session of the same account that builds its own version of every fork, its
-   turns paid like this session's; Codex, the same work by another model, which catches what
-   two Claudes agree on by habit and which the Claude Code skills of the project do not bind.
-   It is a closed question, asked as
-   [`../../references/questions.md`](../../references/questions.md) says, no peer first; the
-   free line takes the owner's own words, a model for the Claude peer among them. It is a
-   question about the session and not about the design, so it does not wait for the facts.
+0. **The peer.** Not asked when the request already answers it or outside agterm, where no
+   peer can run. Otherwise read "The peer question" in
+   [`../../references/questions.md`](../../references/questions.md) with the Read tool and ask
+   it as that section says; here the Claude Code
+   peer builds its own version of every fork. It is a question about the session and not
+   about the design, so it does not wait for the facts.
 1. **Frame.** What the owner wants to have at the end: a mechanism, a contract, a boundary, a
    removal. One question, skipped when the request already says it.
 2. **Context and facts**, below. Nothing is asked before they are read. The step opens with the
@@ -72,9 +69,7 @@ points at, for the owner's decisions and the rules the owner has stated; the pro
 the areas the request names with the records that bind or explain them.
 
 - A claim about the code is made after a grep or a read. "The gateway already retries" without
-  the read behind it is a guess, and a guess is not put to the owner. The path and the line
-  stay with the agent: the owner reads a design, not the tree, and a file is named only when
-  the owner asks where something lives.
+  the read behind it is a guess, and a guess is not put to the owner.
 - A claim about a system the repository does not own (an engine, a library, a vendor's device
   or protocol, a browser API) is checked the same way: against the vendor's document or a field
   note where the `Records` section names them, or against the source of the version the tree
@@ -85,9 +80,8 @@ the areas the request names with the records that bind or explain them.
   question, and an option that departs from them says so in the fork. What was not checked
   carries the words «не проверено» beside it.
 - Before an option goes into a question, every record the `Records` section names, binding or
-  rationale, is grepped by the words of its mechanism, not by the area: `version`, `etag`,
-  `if-match`, `idempot`, `lock`, `retry`, `outcome`, the mechanism's own name. A record that
-  already decided the opposite sits under another domain's title. A record the `Records`
+  rationale, is grepped by the words of its mechanism, not by the area. Read the word list in the
+  `Records` section of [references/rules.md](../../references/rules.md) before the grep. A record the `Records`
   section names as rationale does not bind the choice: the option that goes against one says so
   and that the record is rewritten after it, with no question of its own. A record it names as
   binding does bind, and an option that breaks one says so. With no `Records` section, the code
@@ -132,13 +126,14 @@ and the owner reads it before any option.
   price as a note, never as the price;
 - a recommendation with its reason in one line.
 
-A small question, a name, a default, a flag, is one line without the form.
+A small question, a name, a default, a flag, is one line in the chat, without the form and,
+inside agterm, without the page.
 
 ## The fork page
 
 Inside agterm (`AGTERM_SESSION_ID` is set) every fork with options goes to the owner as a page
-in the overlay, not as a comparison in the chat, and the owner picks and comments on the page. Only a small question, a name,
-a default, a flag, stays one line in the chat. A fork asked again goes as a page again: after
+in the overlay, not as a comparison in the chat, and the owner picks and comments on the page.
+A fork asked again goes as a page again: after
 a comment, after «объясни», after a request for an example, after an option was corrected. A
 request to go faster cuts the forks and the checks, never the page. The two stages stay: the
 today block is the first, the option cards are the second. The markup, the pictures the shell draws
@@ -152,10 +147,11 @@ states an object passes. A fork with no shape gets cards with text and no pictur
 - **One picture answers the question of the fork**, and the question picks its kind: who asks
   whom is a flow between roles; where data lives is stores with their owners; what happens to
   an object is its states; what the user sees is a sketch of the screen.
-- **The kind picks who draws it.** A flow is drawn by the page. Everything else goes to
-  diagram-design first, which picks the type. A shape it has no type for, a screen above all,
-  the lead draws by hand. How to load diagram-design, how to answer its pauses and what to ask
-  of it are in [references/diagrams.md](../../references/diagrams.md).
+- **The kind picks who draws it.** A flow between roles is drawn by the page. Everything else
+  goes to diagram-design first, which picks the type. A shape it has no type for, the user's
+  screen above all, the lead draws by hand. Read
+  [references/diagrams.md](../../references/diagrams.md) before the first picture: it says how
+  to load diagram-design, how to answer its pauses and what to ask of it.
 - **Today is drawn once, and every option is the same picture.** The same roles stand in the
   same places, and colour marks only what the option adds and what it removes. A picture of an
   option shows the roles the difference touches, not the subsystem.
@@ -163,8 +159,8 @@ states an object passes. A fork with no shape gets cards with text and no pictur
   it, with the concrete names the scenario uses.
 - **The price is seen.** Every moving part an option adds is drawn and marked as new: the
   count of new marks is the price at a glance, and the price line says what the marks cannot.
-- **The words are the message's words.** Roles and plain words, no paths, type or RPC names;
-  «не проверено» stands on the element it belongs to.
+- **The words are the message's words**, as "The shape of a message" says; «не проверено»
+  stands on the element it belongs to.
 - **Text says what the picture does not**: the price at run time, the reason of the
   recommendation. Text that retells the picture is cut.
 - **Options stand side by side while their pictures read at that width.** A wide picture, a
@@ -186,8 +182,9 @@ and a rejected option the owner marks comes back as an option of the same fork.
 
 The gist is text above the question, not inside it. A preview, the shape of a call, a table,
 a message on the bus, is up to ~10 lines or is left out. No paths, line numbers, type or RPC
-names in the text: roles and plain words carry it, and an owner who wants the place asks for
-it. One fork per message, even when several are ready: the next one waits for the answer.
+names in the text: the owner reads a design, not the tree, roles and plain words carry it, and
+a file is named only when the owner asks where something lives. One fork per message, even
+when several are ready: the next one waits for the answer.
 A numbered batch of forks gets answered "1 — a, 2 — не понял, 3 — не понял", and the forks
 left unclear are lost in it. A message stays under ~600 words; what does not fit waits for
 the next one.
@@ -227,27 +224,7 @@ There is no fourth item, and "start now" is not one.
 
 | Mistake | Fix |
 |---|---|
-| Asked before the facts were read | Memory, the project rules, the glossary, the tree, then the question |
-| A claim about code from memory | Grep or read first; the path stays with the agent |
-| An engine, a library or the reference product from memory | The vendor document, the field note, the pinned source or the reference product's code; otherwise «не проверено» |
-| Checked the records of the area only | Grep every record the `Records` section names by the words of the mechanism |
-| A rationale record taken as binding, or a binding one as advice | The `Records` section says which binds |
-| The fork opens with the mechanism | Plain words first: what the user sees, then who asks whom, by role |
 | Options told in the abstract, the owner asks «на примере» | A scenario with concrete names in each option of an architectural fork |
 | A name coined in the session used as if the owner knows it | Explain it in the sentence where it appears, or drop it |
-| Paths, line numbers or type names in the message | Roles and plain words; a file is named when the owner asks where |
-| «Так делает индустрия» with no product or document named | Name who does it, or «не проверено» |
 | The departure from the product requirements surfaced at the assembly | Read them before the option is offered; the fork says it |
-| The new mechanism first | The simplest first; a deletion or a config value before a component |
-| The price given as lines of code | What it adds to the system; the code size is a note beside it |
-| A picture per option, each laid out its own way | Today once; every option the same picture with the difference coloured |
-| The whole subsystem in an option's picture | The roles the difference touches |
-| A picture for a fork with no shape | Cards with text |
-| States or a store drawn by hand while diagram-design has a type for them | diagram-design first; by hand only a shape it has no type for |
-| A fork, or the same fork asked again, given as text inside agterm | A page; the chat carries only a name, a default, a flag |
 | The answer of the page left in the tool output | The pick and every comment word for word in the chat |
-| Chose for the owner on "не знаю" | Explain and ask again |
-| Took a silent yes as a decision | «значит, X, потому что Y» |
-| A lock, a cache or a name slipped into the design unasked | Its own fork |
-| Launched a wave, wrote a file or opened a plan without a question | Ask first |
-| The summary before "ещё вопросы?" | The question, the "no", then the summary |

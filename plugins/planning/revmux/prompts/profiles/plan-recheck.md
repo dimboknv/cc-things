@@ -12,8 +12,9 @@ and must not guess at them — report what you find yourself.
 ## The question of this round
 
 The previous rounds of this task are injected below; read their findings. `{{SCOPE}}` lists the
-sections the author edited since, each with the finding it answers. Answer two things and nothing
-else:
+sections the author edited since, each with the finding it answers. After a refresh of the plan to
+the tree, an edit answers a premise, a record or a skill that moved instead of a finding: read it as
+that finding, checked against the tree. Answer two things and nothing else:
 
 1. **Did each edit close the finding it answers?** A finding the edit only renamed, moved, or
    answered in a section the executor will not read is still open: report it again, at its severity.

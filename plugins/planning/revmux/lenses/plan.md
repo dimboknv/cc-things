@@ -9,6 +9,8 @@ one found after the run: a premise that was false of the tree, or a choice the p
 the executor to make.
 
 `scope.md` names two files by absolute path. Read both first; this lens does not restate them.
+It also names the base directory that `Repo:` lines are relative to, the directory that holds
+every repository of the plan; when it names none, that is the working directory.
 
 - The form: the form of a plan, `references/form.md` of the `make-plan` skill. Hold the plan to
   it.
@@ -19,9 +21,9 @@ the executor to make.
   out, or a file that is "none", adds nothing: no record binds, and the search runs over the
   whole checkout. A heading the file carries beyond those is an addition to this lens.
 
-A task's tree is its repository: the directory its `Repo:` line names, relative to the working
-directory, or, for a task without the line, the repository the plan lies in. Run a task's
-anchors, inventory and searches there.
+A task's tree is its repository: the directory its `Repo:` line names, relative to the base
+directory `scope.md` names, or, for a task without the line, the repository the plan lies in.
+Run a task's anchors, inventory and searches there.
 
 Check each of these and report where one fails:
 
@@ -50,8 +52,8 @@ Check each of these and report where one fails:
   build and deploy scripts, and the code written by hand beside a generated client.
 - A rename or a removal carries an inventory: the `rg` set of terms in every spelling the tree
   could hold, and the surfaces it runs over. Run the inventory yourself. A term or a surface the
-  set misses is a finding. A task that adds or changes something carries no inventory, and its
-  absence there is not one.
+  set misses is a finding; the plans directory is not one, since the inventory excludes it. A
+  task that adds or changes something carries no inventory, and its absence there is not one.
 - One owner per fact, and nothing against a binding record. A value, a vocabulary or a schema
   the plan states in prose while an artifact owns it, a migration, a contract file or a module,
   as the project's `CLAUDE.md` or the `Records` section names it, is a finding. So is a
@@ -84,7 +86,7 @@ Check each of these and report where one fails:
   `major`: its lane works in one repository's worktree, and a change across two repositories is
   two tasks joined by `After:`. Two tasks of different repositories never share a file, so a
   Shared files row that names two such tasks is a contradiction between the table and what the
-  tasks edit. A `Repo:` that names no directory under the working directory is a fact the tree
+  tasks edit. A `Repo:` that names no directory under the base directory is a fact the tree
   refutes.
 - The light mode. A plan whose Execution carries a Mode line is held to the conditions the form
   gives under Mode. For such a plan, a reader or writer of a changed shape the plan does not

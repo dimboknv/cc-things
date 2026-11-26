@@ -50,7 +50,8 @@ fragment that links a diagram-design drawing is shown with
   `columns` holds only while every option gets 330 px in one row; below that the page shows
   rows, so a third card never drops under the first two.
 - An option's `data-option` is a short id in Latin letters. It comes back in the answer and
-  never reaches the owner's eyes; `data-title` does.
+  never reaches the owner's eyes; `data-title` does. `own`, `explain`, `today` and `general`
+  are the page's own keys, and `show` refuses an option that takes one.
 - The picture of the today block and of an option is its first element: a `data-flow` script,
   a `<figure>`, an `<svg>` or a `<figure data-diagram>`. A block without one is text only.
 - `data-rejected` blocks are optional and land in a folded list with a "bring it back" mark.
@@ -59,10 +60,9 @@ fragment that links a diagram-design drawing is shown with
 
 ## Pictures
 
-Who draws which kind is in [`../../references/diagrams.md`](../../references/diagrams.md): a
-flow is the page's own `data-flow`; everything else is a diagram-design drawing; a shape
-diagram-design has no type for, the user's screen above all, is an `<svg>` the lead writes by
-hand. Below is the markup of each.
+Who draws which kind is in [`../../references/diagrams.md`](../../references/diagrams.md).
+Below is the markup of each: a flow is the page's own `data-flow`, a hand-drawn picture an
+`<svg>`, a diagram-design drawing a linked `<figure>`.
 
 **A flow, who asks whom.** `data-roles` places every role once, by `x` and `y` of its top
 left corner; the width follows the label unless `w` is given. Every `data-flow` draws from
@@ -70,7 +70,11 @@ those roles, so a role stands in the same place in the today block and in every 
 `nodes` lists the roles this picture shows, each `""`, `"new"` or `"off"` (present today, not
 part of this option). An edge is `[from, to, kind, step]`: `kind` is `""`, `"new"` or
 `"gone"`, and `step` is the number of the scenario step the arrow carries, left out for an
-arrow outside the scenario.
+arrow outside the scenario. A pair of roles carries one arrow: a second edge between the same
+two roles, in either direction, is drawn over the first. Roles or a flow that is not JSON
+(`NaN` and `Infinity` are not), a role that `nodes` or an edge names and `data-roles` does not
+place, an edge from a role to itself, and a `data-roles` script that is not the one inside the
+`data-place` root end `show` with exit 1.
 
 **A hand-drawn picture**, a shape diagram-design has no type for, is an inline `<svg>` with a
 `viewBox`. The shell's classes keep it in the theme:
@@ -99,8 +103,8 @@ For each such figure `fork.py`:
 The shell shows such a picture across the whole card with the text under it, without its own
 legend of the marks, since the drawing carries one, and the whole fork in `rows`, whatever `data-layout` says: in a column or in three fifths of a row the
 drawing's labels shrink below reading size. A linked figure without `--diagram-design`, a
-folder without `scripts/export_svg.py`, a missing file or a failed export ends `show` with
-exit 1 and the reason on stderr.
+folder without `scripts/export_svg.py`, a missing file, a failed export, and a figure that is
+not empty or whose value is not quoted end `show` with exit 1 and the reason on stderr.
 
 ## The answer
 
@@ -116,8 +120,9 @@ plus `today`. `reopen` lists the rejected options the owner wants back.
 |---|---|---|
 | 0 | stdout is the answer | Proceed as after any answer |
 | 2 | the owner closed the page | Ask in chat what to do; nothing is chosen |
-| 3 | still open after 3 hours, stdout is the page id | `fork.py result <page-id>` when the owner says the page is answered. Never open a second page over it |
-| 1 | an error, on stderr | Outside agterm give the fork as text; otherwise fix the fragment and show again |
+| 3 | still open after 3 hours, or its state could not be read for half a minute; stdout is the page id | `fork.py result <page-id>` when the owner says the page is answered. Never open a second page over it |
+| 1 from `show` | an error, on stderr; no page was opened | Outside agterm give the fork as text; otherwise fix the fragment and show again |
+| 1 from `result` | the page's state could not be read for half a minute; the page may still be open | `fork.py result <page-id>` again later. Never show a second page |
 
 Run `show` as a background Bash call (`run_in_background: true`) and end the turn on the one
 line saying which fork is open. Claude Code wakes the session when the command exits, that is

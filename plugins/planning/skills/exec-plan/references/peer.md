@@ -55,6 +55,11 @@ in the tree behind it:
 Not a review of the design: the Decisions are settled. What you did not check carries
 «не проверено».
 
+A `plan` whose last line is `continuation, no reply needed` starts you on a run that is
+already under way, after a stop. Run steps 1 and 3 of "Before the first message", read
+`notes.md` as it stands, and send nothing: the council was held when the run started. The
+next message is a `wave N`.
+
 ## `wave N`
 
 The lead names the plan, the run worktree and the commit range of the wave in each repository

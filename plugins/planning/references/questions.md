@@ -37,3 +37,21 @@ output style or a user rule sends questions as text.
   placeholder says what may go there. AskUserQuestion has that field without asking.
 - AskUserQuestion takes four options at most. A question with five drops the item the skill
   names, and the owner still gives it in the free field.
+
+## The peer question
+
+`brainstorm` and `exec-plan` may run with a peer, a second agent in the split pane, and ask
+about it the same way. It is the first question, asked before anything else and alone. It is
+not asked when the request already answers it, or when the session is not in agterm, where no
+peer can run. It is a closed question, asked as this file says, no peer first. Three answers,
+each with what it costs:
+
+- no peer: the session or the run as the skill's own file describes it. A bare «ок» means
+  this;
+- Claude Code: a second session of the same account in the split pane, doing the work the
+  skill gives its peer. Its turns are paid like this session's;
+- Codex: the same work by another model, which catches what two Claudes agree on by habit. The
+  Claude Code hooks and skills of the project do not bind it.
+
+The free line takes the owner's own words, a model for the Claude peer among them. The skill
+says what its peer does and any cost of its own.

@@ -115,9 +115,9 @@ tree, and it checks what the reviews check later, the lens in
 
 Read first what the request names: the areas, the records of the domain the `Records` section
 names, the skills of the surfaces. Then grep those records by the words of each mechanism a
-decision applies, not by the area: `version`, `etag`, `if-match`, `idempot`, `lock`, `retry`,
-`outcome`, the mechanism's own name. A record in force that already decided the opposite sits
-under another domain's title. Grep them also by the words of each consequence of a decision,
+decision applies, not by the area. Read the word list in the `Records` section of
+[`../../references/rules.md`](../../references/rules.md) before the grep; the hit that counts is a
+record in force. Grep them also by the words of each consequence of a decision,
 what it stops keeping, raising, checking or recording: `evict`, `age out`, `retention`,
 `raised`, `audit`, `shard`, `exit`. A conflict reaches a plan through a consequence more often
 than through a mechanism's name. A binding record's text that this plan's Owner Sign-off
@@ -133,8 +133,7 @@ it in place, in the way that section says, and its acceptance goes into Owner Si
 into a separate question. A record it names as binding does bind, and a decision against one
 is a fork. That fork offers, beside the mechanism that obeys the record, a clause added to the
 record at no cost in machinery, with the clause's exact words: changing a binding record is the
-owner's, and the owner decides by the words. With no `Records` section, a claim is checked
-against the code and the vendor's document only, and every choice is the owner's fork.
+owner's, and the owner decides by the words.
 
 When the tree is wider than one session reads, name the wave before launching it: how many
 `Explore` agents, one to three, and what each verifies, one line each. Launch them after the
@@ -143,29 +142,21 @@ is not written into the plan.
 
 ## Step 3: forks, one at a time
 
-Before the first fork, the owner gets the list: how many forks discovery left, each named in a
-few plain words. Every fork then opens with its place, "fork 2 of 5", in the language of the
-conversation. A fork that an answer settles or adds changes the count, and the next message
-says so: "after this answer 3 are left, one added: …".
-
-Ask one fork, wait for the answer, then ask the next. A fork is a choice the tree does not
-settle: a false premise, a mechanism, a boundary, a hole found in discovery. It opens with the
-problem in one or two sentences, what breaks or stays unsettled without the choice, and then
-takes the form of [`brainstorm`](../brainstorm/SKILL.md), "A fork", "The fork page" and "The
-shape of a message": plain words by role before any option, two or three options with the
-simplest first, one scenario with concrete names for each, whether an option follows the
-industry's way and whose, the price as what it adds at run time, one recommendation, and
-inside agterm a page in the overlay rather than a message. That form has one home, and this
-file does not repeat it.
+A fork is a choice the tree does not settle: a false premise, a mechanism, a boundary, a hole
+found in discovery. It opens with the problem in one or two sentences, what breaks or stays
+unsettled without the choice. Then it is asked as [`brainstorm`](../brainstorm/SKILL.md) asks
+one. Read that file with the Read tool before the first fork. It gives the list of forks,
+the count and the place, as step 3 of its "The run" says, in the language of the
+conversation; the form of "A fork"; inside agterm the page of "The fork page";
+one fork per message, as "The shape of a message" says; and "After the answer". That form has
+one home, and this file does not repeat it. The restatement after a silent yes is how the plan carries the
+reason, and a question about what a word means is an "explain".
 
 A hole found while designing is a fork with its price, and the answer goes into the plan,
 never to a backlog item or to "decide during implementation". A choice the owner alone makes,
 the judgements the `Records` section reserves to the owner, accepting a rewritten record,
 taking a tool out of the loop, is asked the same way, and the answer is written into Owner
-Sign-off with the consequence the owner accepts. When the owner takes the recommended option
-without comment, restate it in one line ("so X, because Y") so the plan carries the reason.
-When the owner asks what a word means, or says "explain", explain and ask again without
-choosing. Something the skill adds on its own, a monitor, a lock, a name, is its own fork.
+Sign-off with the consequence the owner accepts.
 
 ## Step 4: write
 
@@ -198,13 +189,16 @@ the one `Repo:` lines are relative to:
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/make-plan/scripts/acceptance.py <plan>
 ```
 
-It runs every `rg`, `grep`, `awk` or `git grep` inside an `acceptance:` item from the root of
-the task's repository, groups the hits by file and marks a file outside the task's `Where:` as
-`outside Where:`. A task it skips for want of a repository lacks its `Repo:` line. Gates
-(`make`, `go`, `npm`) it skips; run those by hand. Every marked file is read: it is the task's
-own and `Where:` gains its area, or the term matches a name the task keeps, another task's file
-or a foreign meaning, and the term is narrowed or the foreign meaning is named in the
-acceptance. An inventory term that matched what the task keeps was the most frequent major
+It runs every `rg`, `grep` or `git grep` inside an `acceptance:` item from the root of the
+task's repository, groups the hits by file and marks a file outside the task's `Where:` as
+`outside Where:`, and a hit in the plan file as `the plan itself`. A command that writes a file
+or runs a program, or does not start with the search, it skips and says why. A task it skips
+for want of a repository lacks its `Repo:` line. Gates (`make`, `go`, `npm`) it skips; run
+those by hand. Every marked file is read: it is the task's own and `Where:` gains its area, or
+the term matches a name the task keeps, another task's file or a foreign meaning, and the term
+is narrowed or the foreign meaning is named in the acceptance. A hit in the plan itself means
+the inventory runs over the plans directory, which it excludes, as the form's Inventory item
+says. An inventory term that matched what the task keeps was the most frequent major
 finding of the plan rounds.
 
 Choose the mode before the menu, by the conditions of the Mode item of Execution in
@@ -234,8 +228,10 @@ before it opens.
 For a plan no review has read, the round is the recommendation; for a light plan it is the
 agent, listed first, and the round stays on the menu for the owner to pick. After a review
 (items 1 to 3) the menu comes back with the verdict from "Review findings" below and the item it
-recommends next: a `plan-recheck` round after edits, or on `ready` commit for a tracked plan and
-done for an untracked one.
+recommends next. After edits that is a `plan-recheck` round when the plan's revmux task already
+holds a round, and otherwise the full `plan` round, or the agent again for a light plan: a
+recheck reads the findings of the rounds before it, and the agent and webrev leave none. On
+`ready` it is commit for a tracked plan and done for an untracked one.
 
 ### The lens and the profiles
 
@@ -250,7 +246,8 @@ The `Review` section may name other profiles for the plan round and the recheck;
 
 The lens is read by agents that never see this skill, so the round hands them two paths: the
 form, `${CLAUDE_PLUGIN_ROOT}/skills/make-plan/references/form.md` expanded to its absolute
-path, and the rules file the loader printed. The lens takes both from `scope.md`.
+path, and the rules file the loader printed; and the base directory `Repo:` lines are relative
+to, the directory the session started in. The lens takes all three from `scope.md`.
 
 ### 1. revmux `plan`
 
@@ -259,13 +256,15 @@ Load the `revmux:revmux` skill and follow it, with what a plan changes:
 - The subject is a proposal, not a diff. `scope.md` names the plan file, says to read it in
   full, and lists the areas its `Where:` lines name as the tree to read it against. It names the
   form by its absolute path as "the form", and the rules file by its absolute path as "the
-  project rules", or says "project rules: none". In a plan with more than one repository it
-  lists the areas by repository, each repository by its path. `goal.md` is the plan's Goal in
-  two lines; the criteria are the lens's and are not restated.
+  project rules", or says "project rules: none". It names the directory the session started in
+  by its absolute path as "the base directory of `Repo:` lines": a tracked plan's round runs
+  with `--workdir` its home checkout, which may not be that directory. In a plan with more than
+  one repository it lists the areas by repository, each repository by its path. `goal.md` is
+  the plan's Goal in two lines; the criteria are the lens's and are not restated.
 - The task id is `plan-<slug>`, the slug being the file name without its date and extension,
   as `.revmux/tasks/` names a plan's rounds. The branch's rounds under `/planning:exec-plan`
-  run under the bare slug, and the two are never joined. Rounds are `01-initial`,
-  `02-after-fix`, `03-final`.
+  run under `<slug>-<repo>`, also for one repository, and the two are never joined. Rounds are
+  `01-initial`, `02-after-fix`, `03-final`.
 - The first round's profile is `plan`: two models at xhigh, each carrying the plan, impl and
   adversarial lenses. Preflight with that profile. When revmux does not know the profile, the
   user layer lacks the link: say so, point at the README's step, and offer item 2. When a
@@ -307,6 +306,9 @@ verdict of its own. Its findings are handled like a round's; the verdict this sk
 own.
 
 ### 3. webrev
+
+The `webrev` skill is not part of this plugin; the README lists it among what planning needs
+from outside. When the session has no `webrev` skill, say so and return to the menu.
 
 Load the `webrev` skill and open the plan file itself as a page in the agterm overlay. Every
 annotation gets one line in the reply,
@@ -368,12 +370,15 @@ The argument is a plan that is not among the closed ones. The plan is brought to
 stands and reads afterwards as if written today: no "was", no "now", no note of what moved. It
 keeps its language, and a closed task keeps its ticks. Not the usual removal of a done task.
 
-1. Since when. The mark is a time. For a tracked plan it is the date of the last commit that
-   touched it, `git log -1 --format=%cI -- <plan>` in the home repository; for an untracked
-   plan, or a tracked one no commit has touched yet, it is the file's modification time. Then,
-   in each task's repository, `git -C <repository> log --since=<mark> -- <area>` for every area
-   its `Where:` names. What moved there is what the refresh reads; the rest of the tree is not
-   reread.
+1. Since when. For a tracked plan the mark is the last commit that touched it,
+   `git log -1 --format=%H -- <plan>` in the home repository, and what moved in the home
+   repository is `git log <mark>..HEAD -- <area>` for every area its tasks' `Where:` lines
+   name: a range, so a commit merged in later with an older date is not missed. For an
+   untracked plan, a tracked one no commit has touched yet, and a task of another repository,
+   the mark is a time: the date of that commit, `git log -1 --format=%cI -- <plan>`, else the
+   file's modification time; then `git -C <repository> log --since=<mark> -- <area>` for every
+   area the task's `Where:` names. What moved there is what the refresh reads; the rest of the
+   tree is not reread.
 2. Every premise, by its anchor. Run each. In place: nothing. The fact holds but the quote is
    gone: the anchor is rewritten to what `rg` finds today. The fact is false: a fork for the
    owner in the form of Step 3, and the decisions and tasks that rest on it wait for the
@@ -392,7 +397,11 @@ keeps its language, and a closed task keeps its ticks. Not the usual removal of 
 7. A light plan's Mode still holds: a reader or writer of a changed shape that the log brought
    in, or a choice the tree reopened, makes the plan full, and the Mode line goes.
 
-Everything is edited in place. Then the menu of Step 5, as for a new plan.
+Everything is edited in place. Then the menu of Step 5, and its recommendation is the one it
+gives after edits. When that is a `plan-recheck`, its `scope.md` lists every section the
+refresh edited, each with the moved premise, record or skill it answers, where a recheck after
+a round names a finding. The round is numbered one past the highest the task holds:
+`04-refresh` after `03-final`.
 
 ## Common mistakes
 
@@ -405,8 +414,6 @@ Everything is edited in place. Then the menu of Step 5, as for a new plan.
 | Read the records of the area only | Grep the records the `Records` section names, and the skills, by the words of each mechanism and each consequence |
 | Consumers searched in production code only | Tests, binary suites, end-to-end suites, seeds, build and deploy scripts and the code beside a generated client too |
 | Launched the wave before the go | Name the agents and what each verifies, then wait |
-| Two forks in one question | One fork, one answer, then the next |
-| Options without a price, or the new mechanism first | Price each; the simplest first |
 | A hole sent to the backlog or left to the executor | It joins the plan, as a fork with its price |
 | Proposed a series of plans | One plan; the rest is Out of Scope with where it goes |
 | Ignored the project rules | Load them at the start; a section the project leaves out takes its default |

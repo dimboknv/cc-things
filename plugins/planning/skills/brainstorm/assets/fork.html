@@ -54,6 +54,10 @@ p { margin: 0; max-width: 68ch; }
 .opt .body { flex: 1; }
 .rows .opts { grid-template-columns: 1fr; }
 .rows .opt .split { display: grid; grid-template-columns: 3fr 2fr; gap: 24px; align-items: start; }
+/* a diagram-design drawing is too dense for a column: it takes the card's width, the text goes under it */
+.today.wide, .rows .opt.wide .split { grid-template-columns: 1fr; }
+figure.diagram { margin: 0; }
+figure.diagram img { display: block; width: 100%; height: auto; border-radius: 6px; }
 
 ol.steps { margin: 0; padding: 0; list-style: none; font-size: 14px; display: grid; gap: 4px; counter-reset: step; }
 ol.steps li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; counter-increment: step; }
@@ -188,9 +192,10 @@ root.querySelectorAll('script[data-flow]').forEach(s => {
 function split(node) {
   const first = node.firstElementChild, pic = el('div', 'pic'), body = el('div', 'body');
   const hasPic = first && (first.tagName === 'FIGURE' || first.tagName.toLowerCase() === 'svg');
+  const wide = hasPic && first.classList.contains('diagram');
   if (hasPic) pic.append(first);
   body.append(...node.childNodes);
-  return {pic: hasPic ? pic : null, body};
+  return {pic: hasPic ? pic : null, body, wide};
 }
 const comment = (key, placeholder) => { const t = el('textarea'); t.dataset.c = key; t.placeholder = placeholder; return t; };
 const card = (id, head) => {
@@ -206,12 +211,17 @@ page.append(el('div', 'eyebrow', `Развилка ${root.dataset.place}`), el('
 
 const todaySrc = root.querySelector('[data-today]');
 if (todaySrc) {
-  const {pic, body} = split(todaySrc), today = el('section', 'today' + (pic ? '' : ' nopic'));
-  const legend = el('div', 'legend');
-  for (const [cls, text] of [['', 'как сегодня'], ['new', 'появляется'], ['gone', 'уходит']]) {
-    const s = el('span'); s.append(el('i', cls), text); legend.append(s);
+  const {pic, body, wide} = split(todaySrc);
+  const today = el('section', 'today' + (pic ? '' : ' nopic') + (wide ? ' wide' : ''));
+  // a diagram-design drawing marks new and gone in its own palette and carries its own legend
+  if (!wide) {
+    const legend = el('div', 'legend');
+    for (const [cls, text] of [['', 'как сегодня'], ['new', 'появляется'], ['gone', 'уходит']]) {
+      const s = el('span'); s.append(el('i', cls), text); legend.append(s);
+    }
+    body.append(legend);
   }
-  body.append(legend, comment('today', 'Комментарий к «как сегодня»: что здесь не так'));
+  body.append(comment('today', 'Комментарий к «как сегодня»: что здесь не так'));
   if (pic) today.append(pic);
   today.append(body);
   page.append(el('div', 'sec', 'Как сегодня'), today);
@@ -226,13 +236,14 @@ const opts = el('div', 'opts');
   const head = el('header');
   head.append(el('span', 'key', key), el('h3', '', src.dataset.title));
   if (src.hasAttribute('data-recommended')) head.append(el('span', 'badge', 'рекомендую'));
-  const {pic, body} = split(src), act = el('div', 'act');
+  const {pic, body, wide} = split(src), act = el('div', 'act');
   act.append(comment(id, 'Комментарий к этому варианту'));
   body.append(act);
   const inner = el('div', 'split');
   if (pic) inner.append(pic);
   inner.append(body);
   const c = card(id, head);
+  if (wide) c.classList.add('wide');
   c.append(inner);
   opts.append(c);
 });
@@ -244,7 +255,9 @@ function layout() {
   const n = opts.children.length;
   opts.style.setProperty('--n', n);
   const fits = page.clientWidth >= n * COLUMN_MIN + (n - 1) * 16;
-  page.classList.toggle('rows', root.dataset.layout === 'rows' || !fits);
+  // a fork with a diagram-design drawing always shows rows: a column squeezes it unreadable
+  const wide = !!page.querySelector('figure.diagram');
+  page.classList.toggle('rows', root.dataset.layout === 'rows' || wide || !fits);
 }
 layout();
 addEventListener('resize', layout);
